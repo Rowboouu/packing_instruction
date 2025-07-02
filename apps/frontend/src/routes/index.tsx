@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRoutes, Outlet } from 'react-router-dom';
+import { useRoutes, Outlet, Navigate  } from 'react-router-dom';
 
 import { MainLayout } from '@/components/layouts/main-layout';
 import { Loader } from '@/components/loader/Loader';
@@ -42,6 +42,7 @@ const appRoutes = [
     element: <AppLayout />,
     children: [
       // { path: '/groups/*', element: <GroupRoutes /> },
+      { path: '', element: <Navigate to="/assortments" replace /> },
       { path: '/Assortments/*', element: <AssortmentsRoutes /> },
       // { path: '/sales-orders/*', element: <SalesOrderRoutes /> },
       // { path: '/config/customers/*', element: <CustomersRoutes /> },
