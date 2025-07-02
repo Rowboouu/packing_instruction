@@ -1,0 +1,156 @@
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial;
+            font-size: 12px;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        table {
+            border-spacing: 0px;
+        }
+
+        td {
+            padding: 0 3px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <table>
+
+        <tbody>
+            <tr>
+                <td>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <img style="width:200px;"
+                                        src="https://www.1000miles.biz/assets/images/signature/signature3.png" /></br>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding-top: 10px"><strong>1000 MILES LIMITED</strong></td>
+                            </tr>
+                            <tr>
+                                <td>One stop for all your gift solutions </td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td style="padding-top:20px;color: #808080">Tong Xin Printing Park, Building 2, Floor 4
+                                </td>
+                            <tr>
+                                <td style="color: #808080">No.1 Wen Hua Road Yiwu, Zhejiang, China 322000</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <img style="margin: 20px 20px 20px 0px;"
+                                        src="https://www.1000miles.biz/assets/images/signature/signature2.jpg" />
+                                </td>
+                            </tr>
+                        <tbody>
+                    </table>
+                </td>
+
+
+                <td>
+                    <table style="margin-left:15px">
+                        <tbody>
+                            <tr>
+                                <td colspan="2">
+                                    <strong>
+                                        <%= name %>
+                                    </strong>
+                                    <br />
+                                </td>
+                            <tr>
+                            <tr>
+                                <td colspan="2">
+                                    <%= position %>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="padding-top:10px"> </td>
+                            </tr>
+            </tr>
+            <td colspan="2">
+                <div style="margin-top: 15px; border-bottom:1px; border-bottom-style:solid"></div>
+            </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <div style="margin-top:15px"></div>
+                </td>
+            </tr>
+            <tr>
+                <td style="color: #2B88CB; padding-right:0 30px">Direct: </td>
+                <td>+86 579 8510 9070 Ext <%= ext %>
+                </td>
+            </tr>
+            <tr>
+                <td style="color: #2B88CB; padding-right:30px">Office:</td>
+                <td>+86 579 8510 9070</td>
+            </tr>
+            <tr>
+                <td style="color: #2B88CB; padding-right: 30px">Skype:</td>
+                <td>
+                    <% if(skype) { %>
+                        <a href="mailto:<%= skype %>">
+                            <%= skype %>
+                        </a>
+                        <% } else { %>
+                            <a href="mailto:<%= email %>">
+                                <%= email %>
+                            </a>
+                            <% } %>
+                </td>
+            </tr>
+            <tr>
+                <td style="color: #2B88CB; padding-right: 30px ">Email:</td>
+                <td>
+                    <a href=" mailto: <%= email %>">
+                        <%= email %>
+                    </a>
+                </td>
+            </tr>
+            <tr>
+                <td style="color: #2B88CB; padding-right: 30px">Website:</td>
+                <td><a href="http://www.1000miles.biz">www.1000miles.biz</a></td>
+            </tr>
+
+            <tr>
+                <td style="color: #2B88CB; padding-right: 30px;">Showroom:</td>
+                <td> <a href="http://www.1000miles.biz/onlineshowroom">wwww.1000miles.biz/onlineshowroom</a></td>
+            </tr>
+            <tr>
+                <td style="padding-top:20px"></td>
+            </tr>
+        </tbody>
+    </table>
+    </td>
+    </tr>
+    <br />
+    <tr>
+        <td colspan="2">
+            <img style="width:100%" src="https://www.1000miles.biz/assets/images/signature/signature1.jpg">
+        </td>
+    </tr>
+    </tbody>
+    </table>
+</body>
+
+</html>

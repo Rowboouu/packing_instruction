@@ -1,0 +1,53 @@
+{
+  "languages": {
+    "en": "English",
+    "zh": "Chinese"
+  },
+  "sidebar": {
+    "section": {
+      "pages": "Pages",
+      "settings": "Settings"
+    },
+    "navigation": {
+      "groups": "Groups",
+      "createGroup": "Create Sales Order Group",
+      "assortments": "Assortments",
+      "configurations": "Configurations",
+      "customers": "Customers",
+      "templates": "Templates",
+      "users": "Users"
+    }
+  },
+  "title": {
+    "create": {
+      "newGroup": "Create New Group"
+    }
+  },
+  "fiels": {
+    "name": "Name",
+    "customers": "Customers"
+  },
+  "button": {
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "placeholder": {
+    "name": "Enter name",
+    "customerSelect": "Select a customer",
+    "search": "Search ..."
+  },
+  "section": {
+    "assortments": {
+      "header": "Assortments"
+    },
+    "users": {
+      "header": "Users"
+    },
+    "templates": {
+      "header": "Templates"
+    },
+    "customers": {
+      "header": "Customers"
+    }
+  }
+}

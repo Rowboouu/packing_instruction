@@ -1,0 +1,14 @@
+
+# Upload folders
+/uploads/assortments/*
+!/uploads/assortments/.gitkeep
+
+/uploads/templates/*
+!/uploads/templates/.gitkeep
+
+/uploads/images/*
+!/uploads/images/.gitkeep
+
+
+/temp/*
+!/temp/.gitkeep

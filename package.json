@@ -1,0 +1,33 @@
+{
+  "name": "pack_center",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "dotenv -- turbo start",
+    "build": "turbo build",
+    "dev": "dotenv -- turbo dev --no-cache  --continue",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "lint": "turbo lint",
+    "test": "dotenv -- turbo test",
+    "typecheck": "turbo typecheck",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@nestjs/mapped-types": "*",
+    "dotenv-cli": "^7.4.1",
+    "prettier": "^3.0.0",
+    "turbo": "^1.13.3"
+  },
+  "packageManager": "pnpm@9.1.1",
+  "devDependencies": {
+    "husky": "^9.0.11"
+  }
+}

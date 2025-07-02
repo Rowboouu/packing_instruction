@@ -1,0 +1,7 @@
+{
+  "extends": "@pack-center/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": "./"
+  }
+}

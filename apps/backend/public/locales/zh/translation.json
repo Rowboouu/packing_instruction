@@ -1,0 +1,53 @@
+{
+  "languages": {
+    "en": "英语",
+    "zh": "中国人"
+  },
+  "sidebar": {
+    "section": {
+      "pages": "页数",
+      "settings": "设置"
+    },
+    "navigation": {
+      "groups": "团体",
+      "createGroup": "创建销售订单组",
+      "assortments": "品种",
+      "configurations": "配置",
+      "customers": "顾客",
+      "templates": "模板",
+      "users": "用户"
+    }
+  },
+  "title": {
+    "create": {
+      "newGroup": "创建新组"
+    }
+  },
+  "fiels": {
+    "name": "姓名",
+    "customers": "顾客"
+  },
+  "button": {
+    "save": "节省",
+    "cancel": "取消"
+  },
+  "placeholder": {
+    "name": "输入名字",
+    "customerSelect": "选择客户",
+    "search": "搜索 ..."
+  },
+  "section": {
+    "assortments": {
+      "header": "品种"
+    },
+    "users": {
+      "header": "用户"
+    },
+    "templates": {
+      "header": "模板"
+    },
+    "customers": {
+      "header": "顾客"
+    }
+  }
+}

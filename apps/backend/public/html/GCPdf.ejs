@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>
+    <%= assortment.customerItemNo %> Package Confimation Form.pdf
+  </title>
+</head>
+
+<body class="pdf-container">
+  <div class="pdf-header-container pdf-title-container">
+    <span>GIFTCRAFT PACKAGING CONFIRMATION FORM</span>
+  </div>
+  <table>
+    <tbody>
+      <tr>
+        <td>
+          <span class="pdf-text">Vendor Name:</span>
+          <span class="pdf-text">1000 Miles Limited</span>
+        </td>
+        <td style="display: flex; justify-content: space-between; width: 100%">
+          <div>
+            <span class="pdf-text">Vendor Code: </span>
+            <span class="pdf-text">10001</span>
+          </div>
+          <div>
+            <span class="pdf-text">Date: </span>
+            <span class="pdf-text">
+              <%= today %>
+            </span>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <span class="pdf-text">P.O. #: </span>
+          <span class="pdf-text">
+            <%= order?.customerPoNo %>
+          </span>
+        </td>
+        <td class="d-flex">
+          <span class="pdf-text">Item #: </span>
+          <span class="pdf-text">
+            <%= assortment.customerItemNo %>
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="pdf-section-container" style="width: 160px">
+    <span>Master Carton</span>
+  </div>
+  <div class="pdf-header-container">
+    <table>
+      <tbody>
+        <tr>
+          <td>
+            <span style="font-weight: bold">
+              Shipping Mark - Print of four sides of the carton
+            </span>
+          </td>
+          <td>
+            <span>UCC 128 Label for Master Carton</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <table>
+    <tbody>
+      <tr>
+        <td class="border-full">
+          <div style="
+                display: flex;
+                justify-content: space-between;
+                padding-top: 10px;
+                flex-direction: column;
+                height: 100%;
+                gap: 5px;
+              ">
+            <div>
+              <div class="image-container" style="width: 60%">
+                <img style="height: 80px; object-fit: contain" src="<%= gcLogo %>" alt="gc_logo" />
+              </div>
+              <table style="width: 70%">
+                <tbody>
+                  <tr>
+                    <td class="pdf-text">ITEM #:</td>
+                    <td class="pdf-text">
+                      <%= assortment.customerItemNo %>
+                    </td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td class="pdf-text">PO #:</td>
+                    <td class="pdf-text">
+                      <%= order?.customerPoNo %>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="pdf-text">QTY.:</td>
+                    <td class="pdf-text">
+                      <%= itemInCarton %>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="pdf-text">CUBIC MEAS.:</td>
+                    <td class="pdf-text">
+                      <%= itemCuft %>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="pdf-text">GROSS WT:</td>
+                    <td class="pdf-text">
+                      <%= itemWeight %>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div>
+                <span class="pdf-text">
+                  MADE IN China / FABRIQUE EN Chine
+                </span>
+              </div>
+            </div>
+            <div class="pdf-text pdf-flex-default align-items-center">
+              <span>
+                <strong> CUSTOMER SERVICE </strong>
+              </span>
+              <span>
+                <strong>CANADA</strong> 1-877-387-9777 /
+                <strong>U.S.A.</strong> 1-877-387-4888
+              </span>
+              <a href="https://www.giftcraft.com">www.giftcraft.com </a>
+            </div>
+          </div>
+        </td>
+        <td class="border-full">
+          <div class="pdf-flex-default" style="padding: 10px 0 5px">
+            <span class="pdf-text">
+              Attach a jpeg scan of the actual UCC label.
+            </span>
+            <span class="pdf-text">
+              pictures of UCC labels cannot be read by a barcode reader
+              device.
+            </span>
+          </div>
+          <div class="image-container" style="padding: 2px; min-height: 240px">
+            <% if (masterUccLabel) { %>
+              <img style="height: 240px;width: auto;max-width: 600px;object-fit: contain;" src="<%= masterUccLabel %>"
+                alt="masterUccLabel" />
+              <% } %>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="pdf-section-container" style="width: 160px">
+    <span>Inner Carton</span>
+  </div>
+
+  <div class="pdf-header-container">
+    <table>
+      <tbody>
+        <tr>
+          <td>
+            <span style="font-weight: bold">
+              Shipping Mark - Print on one side of the carton
+            </span>
+          </td>
+          <td>
+            <span>UCC 128 Label for Inner Carton</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <table>
+    <tbody class="border-full">
+      <tr>
+        <td class="border-full">
+          <div style="
+                display: flex;
+                justify-content: space-between;
+                padding-top: 20px;
+              ">
+            <div style="width: 150px">
+              <table>
+                <tbody>
+                  <tr>
+                    <td class="pdf-text">ITEM #:</td>
+                    <td>
+                      <%= assortment.customerItemNo %>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="pdf-text">QTY.:</td>
+                    <td class="pdf-text">
+                      <%= itemPerUnit %>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="image-container" style="height: 200px">
+              <% if (innerItemLabel) { %>
+                <img style="
+                    height: 200px;
+                    width: auto;
+                    max-width: 480px;
+                    object-fit: contain;
+                  " src="<%= innerItemLabel %>" alt="innerItemLabel" />
+
+                <% } %>
+            </div>
+          </div>
+        </td>
+
+        <td class="border-full">
+          <div class="pdf-flex-default" style="padding: 15px 0 5px">
+            <span class="pdf-text">
+              Attach a jpeg scan of the actual UCC label. Digital pictures of
+            </span>
+            <span class="pdf-text">
+              UCC labels cannot be read by a barcode reader device.
+            </span>
+          </div>
+          <div class="image-container" style="height: 160px">
+            <% if (innerUccLabel) { %>
+              <img style="
+                  height: 160px;
+                  width: auto;
+                  max-width: 480px;
+                  object-fit: contain;
+                " src="<%= innerUccLabel %>" alt="innerUccLabel" />
+              <% } %>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="d-flex align-items-center">
+    <div class="pdf-section-container" style="width: 160px">
+      <span>UPC Label</span>
+    </div>
+    <span class="pdf-text" style="padding-left: 10px">
+      To be placed on each product
+    </span>
+  </div>
+
+  <table>
+    <tbody>
+      <tr style="height: 315px">
+        <td class="border-full">
+          <div class="pdf-flex-default">
+            <span class="pdf-text font-weight-bold">Front of UPC label</span>
+            <span class="pdf-text">
+              Attach a jpeg scan of the actual UCC label. Digital pictures of
+            </span>
+            <span class="pdf-text">
+              UCC labels cannot be read by a barcode reader device.
+            </span>
+          </div>
+          <div class="border-t border-r image-container"
+            style="margin-top: 5px;width: fit-content;min-width: 275px;height: 265px;display: flex;align-items: flex-start;">
+            <% if (upcLabelFront) { %>
+              <img style="
+                  height: 260px;
+                  width: auto;
+                  max-width: 375px;
+                  object-fit: contain;
+                " src="<%= upcLabelFront %>" alt="upcLabelFront" />
+              <% } %>
+          </div>
+        </td>
+        <td class="border-full">
+          <div class="pdf-flex-default">
+            <span class="pdf-text font-weight-bold">Front of UPC label</span>
+            <span class="pdf-text">
+              Attach a jpeg scan of the actual UCC label. Digital pictures of
+            </span>
+            <span class="pdf-text">
+              UCC labels cannot be read by a barcode reader device.
+            </span>
+          </div>
+          <div class="border-t border-r image-container"
+            style="margin-top: 5px;width: fit-content;min-width: 275px;height: 265px;display: flex;align-items: flex-start;">
+            <% if (upcLabelBack) { %>
+              <img style="
+                  height: 260px;
+                  width: auto;
+                  max-width: 375px;
+                  object-fit: contain;
+                " src="<%= upcLabelBack %>" alt="upcLabelBack" />
+              <% } %>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="pdf-flex-default border-l">
+    <span class="pdf-text font-weight-bold" style="font-weight: bold">
+      Pictures of UPC Placement on product
+    </span>
+    <span class="text-default">
+      Attach digital pictures of product with UPC codes attached.
+    </span>
+  </div>
+  <div class="border-full" style="display: flex;flex-wrap: wrap;width: 100%;gap: 10px;min-height: 200px;padding: 2px;">
+    <% for(let i=0; i < upcPlacement.length; i++) { %>
+      <img style="
+  height: 200px;
+  width: auto;
+  max-width: 450px;
+  object-fit: contain;
+  " src="<%= upcPlacement[i] %>" alt="upcPlacement<%= i %>" />
+      <% } %>
+
+
+  </div>
+  <br />
+  <div style="page-break-inside: avoid;">
+
+    <table style="page-break-inside: avoid">
+      <tbody>
+        <tr style="background-color: #c0c0c0">
+          <td class="border-full">
+            <div style="text-align: center">
+              <span class="pdf-text" style="font-weight: bold; text-align: center; display: block">
+                Master Carton Markings Pictures
+              </span>
+            </div>
+          </td>
+          <td class="border-full">
+            <div style="text-align: center">
+              <span class="pdf-text" style="font-weight: bold; text-align: center; display: block">
+                Inner Carton Markings Pictures
+              </span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td class="border-full" style="border-bottom: none">
+            <span>
+              Attach digital picture of master carton markings here.
+            </span>
+            <div class="image-container" style="min-height: 100px">
+              <% if (masterCarton) { %>
+                <img class="pdf-img img-2" src="<%= masterCarton %>" alt="masterCarton" />
+                <% } %>
+            </div>
+          </td>
+          <td class="border-full" style="border-bottom: none">
+            <span>Attach a picture of inner carton markings here.</span>
+            <div class="image-container" style="min-height: 100px">
+              <% if (innerCarton) { %>
+                <img class="pdf-img img-2" src="<%= innerCarton %>" alt="innerCarton" />
+                <% } %>
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="border-full" style="border-top: none">
+            <div class="image-container" style="min-height: 100px">
+              <% if (masterShippingMark) { %>
+                <img class="pdf-img img-2" src="<%= masterShippingMark %>" alt="masterShippingMark" />
+                <% } %>
+            </div>
+          </td>
+          <td class="border-full" style="border-top: none">
+            <div class="image-container" style="min-height: 100px">
+              <% if (innerItemUccLabel) { %>
+                <img class="pdf-img img-2" src="<%= innerItemUccLabel %>" alt="innerItemUccLabel" />
+                <% } %>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="page-break-avoid">
+      <div class="pdf-section-container d-flex justify-content-center">
+        <span>Product Pictures</span>
+      </div>
+      <table>
+        <tbody class="border-full">
+          <% if (productPictures.length> 0) { %>
+            <% for(let i=0; i < Math.ceil(productPictures.length / 2); i++) { %>
+              <tr class="pagebreak">
+                <td class="border-r">
+                  <div class="image-container">
+                    <img class="pdf-img img-2" src="<%= productPictures[i * 2] %>" alt="Product Picture <%= i * 2 %>" />
+                  </div>
+                </td>
+                <td>
+                  <div class="image-container">
+                    <% if (productPictures[i * 2 + 1]) { %>
+                      <img class="pdf-img img-2" src="<%= productPictures[i * 2 + 1] %>"
+                        alt="Product Picture <%= i * 2 +1 %>" />
+                      <% } %>
+                  </div>
+                </td>
+              </tr>
+              <% } %>
+                <% } else { %>
+                  <tr>
+                    <td className="border-r">
+                      <div className="image-container" style="height: 200px;" />
+                    </td>
+                    <td>
+                      <div className="image-container" style="height: 200px;" />
+                    </td>
+                  </tr>
+                  <% } %>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="page-break-avoid">
+    <div class="pdf-section-container d-flex justify-content-center">
+      <span>Protective Packaging Pictures</span>
+    </div>
+    <table>
+      <tbody class="border-full">
+        <% if (protectivePackaging.length> 0) { %>
+          <% for(let i=0; i < Math.ceil(protectivePackaging.length / 3); i++) { %>
+            <tr class="pagebreak">
+              <td class="border-r">
+                <div class="image-container">
+                  <img class="pdf-img img-3" src="<%= protectivePackaging[i * 3] %>"
+                    alt="Product Picture <%= i * 3 %>" />
+                </div>
+              </td>
+              <td class="border-r">
+                <div class="image-container">
+                  <% if (protectivePackaging[i * 3 + 1]) { %>
+                    <img class="pdf-img img-3" src="<%= protectivePackaging[i * 3 + 1] %>"
+                      alt="Product Picture <%= i * 3 + 1 %>" />
+                    <% } %>
+                </div>
+              </td>
+              <td>
+                <div class="image-container">
+                  <% if (protectivePackaging[i * 3 + 2]) { %>
+                    <img class="pdf-img img-3" src="<%= protectivePackaging[i * 3 + 2] %>"
+                      alt="Product Picture <%= i * 3 + 2 %>" />
+                    <% } %>
+                </div>
+              </td>
+            </tr>
+            <% } %>
+              <% } else { %>
+                <tr>
+                  <td className="border-r">
+                    <div className="image-container" style="height: 200px;" />
+                  </td>
+                  <td className="border-r">
+                    <div className="image-container" style="height: 200px;" />
+                  </td>
+                  <td>
+                    <div className="image-container" style="height: 200px;" />
+                  </td>
+                </tr>
+                <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="page-break-avoid">
+    <div class="pdf-section-container justify-content-center">
+      <span>
+        Additional Space for pictures or description of protective packaging.
+      </span>
+    </div>
+    <div class="border-full" style="height: 200px"></div>
+    <table>
+      <tbody>
+        <tr class="border-full">
+          <td class="border-full">
+            <div class="d-flex flex-column">
+              <span class="font-weight-bold" style="font-size: 9pt">
+                Inner carton packaging passes 90 cm drop test: YES
+              </span>
+              <span style="font-size: 9pt">
+                Inner carton packaging passes others: _ _ _ _ _ _ _ _ _ _
+                _<strong>YES</strong>
+              </span>
+            </div>
+          </td>
+          <td class="border-full">
+            <div class="d-flex flex-column">
+              <span class="font-weight-bold" style="font-size: 9pt">
+                Master carton packaging passes 90 cm drop test: YES
+              </span>
+              <span style="font-size: 9pt">
+                Master carton packaging passes others:_ _ _ _ _ _ _ _ _ _
+                _<strong>YES</strong>
+              </span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+
+</html>

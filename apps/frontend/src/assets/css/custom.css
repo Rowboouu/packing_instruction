@@ -1,0 +1,215 @@
+.spinner-border-xs {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.2em;
+}
+
+#loading {
+  /* position: fixed; */
+  /* top: 0; */
+  /* left: 0; */
+  /* width: 100%; */
+  /* height: 100%; */
+  /* background: #fff; */
+  /* z-index: 9999; */
+  transition: 0.1s ease opacity;
+  -webkit-transition: 0.1s ease opacity;
+}
+
+#loading.done {
+  opacity: 0;
+}
+
+#loading .spinner {
+  width: 70px;
+  text-align: center;
+  /*   position: fixed; */
+  /*   top: 50%; */
+  /*   left: 50%; */
+  /*   -webkit-transform: translate(-50%, -50%); */
+  /*   transform: translate(-50%, -50%); */
+}
+
+#loading .spinner > div {
+  width: 18px;
+  height: 18px;
+  /* background-color: #333; */
+  border-radius: 100%;
+  display: inline-block;
+  -webkit-animation: sk-bouncedelay 1.4s infinite ease-in-out both;
+  animation: sk-bouncedelay 1.4s infinite ease-in-out both;
+}
+
+#loading .spinner .bounce1 {
+  -webkit-animation-delay: -0.32s;
+  animation-delay: -0.32s;
+}
+
+#loading .spinner .bounce2 {
+  -webkit-animation-delay: -0.16s;
+  animation-delay: -0.16s;
+}
+
+@-webkit-keyframes sk-bouncedelay {
+  0%,
+  80%,
+  100% {
+    -webkit-transform: scale(0);
+  }
+
+  40% {
+    -webkit-transform: scale(1);
+  }
+}
+
+@keyframes sk-bouncedelay {
+  0%,
+  80%,
+  100% {
+    -webkit-transform: scale(0);
+    transform: scale(0);
+  }
+
+  40% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
+
+.custom-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.products-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, 290px);
+  grid-gap: 10px;
+  margin: 0 auto;
+}
+
+.product-grid-item {
+  height: 267px;
+}
+
+.product-grid-item img {
+  height: 200px;
+  object-fit: contain;
+}
+
+.text-limit {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* number of lines to show */
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  max-height: 2.8em; /* Adjust this value based on line height and font size */
+  line-height: 1.4em; /* Adjust this value based on the desired line height */
+  margin: 0;
+}
+
+.dropzone .dz-container {
+  position: relative;
+  padding: 2rem 2rem;
+  margin: 0;
+  border-radius: 0.5rem;
+}
+
+.tabs-trigger[data-state='active'] {
+  color: #3874ff !important;
+  background-color: rgba(0, 0, 0, 0) !important;
+  border-bottom: 2px solid #3874ff !important;
+}
+
+.assortments-images-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, 220px);
+  grid-gap: 10px;
+  margin: 0 auto;
+}
+
+.border-dashed {
+  border: var(--phoenix-card-border-width) dashed
+    var(--phoenix-card-border-color) !important;
+  user-select: none;
+}
+
+.border-dashed-hover:hover {
+  border-color: var(--phoenix-primary) !important;
+}
+
+.custom-btn-soft-primary {
+  color: #003cc7;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+
+  --phoenix-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0);
+}
+
+.pcf-card {
+  position: relative;
+  overflow: hidden;
+  /* min-height: 180px; */
+}
+
+.pcf-image-retake,
+.pcf-image-barcode-error {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.pcf-image-retake h1,
+.pcf-image-barcode-error h1 {
+  color: white;
+  text-transform: uppercase;
+  text-align: center;
+  text-shadow: 2px 4px 10px rgba(0, 0, 0, 1);
+}
+
+.custom-radio-button {
+  appearance: none;
+  background: none;
+  padding: 0;
+  border-radius: 50%;
+  height: 20px;
+  width: 20px;
+  border-width: 2px;
+  border-color: #16223b;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-radio-button .indicator {
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+  background-color: #16223b;
+}
+
+.custom-form-check {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.react-pdf__Page__canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.pdf-file-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
