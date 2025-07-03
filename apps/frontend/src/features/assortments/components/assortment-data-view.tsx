@@ -11,6 +11,7 @@ import { useGetInfiniteAssortment } from '../api/getAssortments';
 import { AssortmentCard } from './assortment-card';
 // import { AssortmentStatusFilter } from './assortment-status-filter';
 import { AssortmentTablePagination } from './assortment-table-pagination';
+import { Icons } from '@/components/icons';
 
 interface AssortmentDataViewProps {
   dataQuery: ReturnType<typeof useGetInfiniteAssortment>;
@@ -29,7 +30,8 @@ export function AssortmentDataView({ dataQuery }: AssortmentDataViewProps) {
     hasPreviousPage,
   } = dataQuery;
 
-  const { allItems, pageCount } = React.useMemo(() => { // const { allItems, pageCount, statusCount }
+  const { allItems, pageCount } = React.useMemo(() => {
+    // const { allItems, pageCount, statusCount }
     const allItems = data?.pages.flatMap((page) => page.items) || [];
     const pageCount = data?.pages?.[0]?.totalPages || 1;
     const statusCount = data?.pages?.[0]?.statusCount || {};
@@ -45,18 +47,23 @@ export function AssortmentDataView({ dataQuery }: AssortmentDataViewProps) {
   }, [allItems, params.status]);
 
   return (
-    <div className='w-auto'>
+    <div className="w-auto">
       <div className="mb-4 flex align-items-center justify-end gap-4">
         <div className="col-2">
           <FilterInput placeholder={t('keyPlaceholder_search')} />
         </div>
         <ViewStyleButton />
       </div>
-      <div className='flex gap-12 my-4 text-sm font-bold text-blue-600 cursor-pointer'>
-        <div>DOWNLOAD ALL PACKING INSTRUCTIONS - PDF</div>
-        <div>DOWNLOAD ALL PACKING INSTRUCTIONS - EXCEL</div>
+      <div className="flex items-center gap-12 py-4 text-blue-600 font-bold underline">
+        <div className="flex items-center">
+          <Icons.ShareO1 width={16} height={16} />
+          <span className="ml-2">{t(`keyButton_download.allPdf`)}</span>
+        </div>
+        <div className="flex items-center">
+          <Icons.ShareO1 width={16} height={16} />
+          <span className="ml-2">{t(`keyButton_download.allExcel`)}</span>
+        </div>
       </div>
-
       <div id="assortments">
         <ConditionalShell condition={params.view_style === 'grid'}>
           <AssortmentGridView

@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"orderItemId":{"$numberInt":"1"}},"name":"orderItemId_1","background":true,"unique":true}],"uuid":"b5c49fac05e545e98cc5ac8b6ed313ff","collectionName":"zuluassortments","type":"collection"}

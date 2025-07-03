@@ -4,18 +4,12 @@ import { useMutation } from '@tanstack/react-query';
 import * as z from 'zod';
 
 export const uploadImageSchema = z.object({
-  masterUccLabel: z.instanceof(File).optional(),
-  masterShippingMark: z.instanceof(File).optional(),
-  masterCarton: z.instanceof(File).optional(),
-  innerItemLabel: z.instanceof(File).optional(),
-  innerUccLabel: z.instanceof(File).optional(),
-  innerItemUccLabel: z.instanceof(File).optional(),
-  innerCarton: z.instanceof(File).optional(),
-  upcLabelFront: z.instanceof(File).optional(),
-  upcLabelBack: z.instanceof(File).optional(),
-  upcPlacement: z.array(z.instanceof(File)).optional(),
-  productPictures: z.array(z.instanceof(File)).optional(),
-  protectivePackaging: z.array(z.instanceof(File)).optional(),
+  itemBarcodeImages: z.array(z.instanceof(File)).optional(),
+  displayImages: z.array(z.instanceof(File)).optional(),
+  innerCartonImages: z.array(z.instanceof(File)).optional(),
+  masterCartonImages: z.array(z.instanceof(File)).optional(),
+  itemPackImages: z.array(z.instanceof(File)).optional(),
+  imageLabels: z.record(z.string()).optional(),
 });
 
 export type UploadImageDTO = z.infer<typeof uploadImageSchema>;
@@ -39,9 +33,12 @@ export async function uploadAssormentImage({
     if (value instanceof File) {
       formData.append(key, value);
     } else if (Array.isArray(value)) {
-      value.forEach((file) => {
-        formData.append(key, file);
+      value.forEach((file, index) => {
+        formData.append(`${key}[${index}]`, file);
       });
+    } else if (typeof value === 'object' && value !== null) {
+      // Handle imageLabels object
+      formData.append(key, JSON.stringify(value));
     } else if (value !== undefined && value !== null) {
       formData.append(key, value as string | Blob);
     }
@@ -52,9 +49,9 @@ export async function uploadAssormentImage({
       'Content-Type': 'multipart/form-data',
     },
   });
-
   return res.data;
 }
+
 type MutationFnType = typeof uploadAssormentImage;
 
 export function useUploadAssortmentImage(

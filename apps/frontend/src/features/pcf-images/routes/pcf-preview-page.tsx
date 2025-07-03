@@ -15,7 +15,6 @@ export function PCFPreviewPage<T extends Assortment>({
   assortment,
 }: PCFPreviewPageProps<T>) {
   const { t } = useTranslation();
-
   const { mutate, isPending: isMutatePending } = useEditAssortment();
 
   const handleApprovedClick = () => {
@@ -27,41 +26,57 @@ export function PCFPreviewPage<T extends Assortment>({
 
   return (
     <>
-      <div className="row">
-        <div className="col"></div>
-        <div className="col-5 d-flex align-items-center justify-content-between">
+      <div className="grid grid-cols-3 gap-4 items-center">
+        {/* Left column - empty spacer */}
+        <div></div>
+
+        {/* Center column - Action buttons */}
+        <div className="flex items-center justify-between space-x-4">
           <NavLink
             to={{
               pathname: '/emails',
               search: `${EMAIL_REDIRECT_KEY}=${assortment._id}`,
             }}
-            className="text-uppercase fw-semi-bold fs--1 d-none"
+            className="uppercase font-semibold text-sm hidden" // d-none equivalent
           >
             <Icons.Send width={16} height={16} />
-            <span className="ms-2">SEND AS EMAIL</span>
+            <span className="ml-2">SEND AS EMAIL</span>
           </NavLink>
+
           <ReportButton
             itemId={assortment._id}
             itemType="item"
             reportType="pdf"
           >
-            <Icons.ShareO1 width={16} height={16} />
-            <span className="ms-2">{t(`keyButton_download.pdfForm`)}</span>
+            <div className="flex items-center">
+              <Icons.ShareO1 width={16} height={16} />
+              <span className="ml-2">{t(`keyButton_download.pdfForm`)}</span>
+            </div>
           </ReportButton>
+
           <ReportButton
             itemId={assortment._id}
             itemType="item"
             reportType="excel"
           >
-            <Icons.ShareO1 width={16} height={16} />
-            <span className="ms-2">{t(`keyButton_download.excelForm`)}</span>
+            <div>
+              <div className="flex items-center">
+                <Icons.ShareO1 width={16} height={16} />
+                <span className="ml-2">
+                  {t(`keyButton_download.excelForm`)}
+                </span>
+              </div>
+            </div>
           </ReportButton>
         </div>
-        <div className="col d-flex justify-content-end">
+
+        {/* Right column - Approve button */}
+        <div className="flex justify-end">
           <Button
             variant={'success'}
             onClick={handleApprovedClick}
             disabled={assortment.status === 'approved'}
+            className="flex items-center"
           >
             {isMutatePending ? (
               <Icons.LoaderSpinner
@@ -72,19 +87,12 @@ export function PCFPreviewPage<T extends Assortment>({
             ) : (
               <Icons.UCheck width={16} height={16} />
             )}
-            <span className="ms-2">{t(`keyButton_approved`)}</span>
+            <span className="ml-2">{t(`keyButton_approved`)}</span>
           </Button>
         </div>
       </div>
 
-      <div
-        className="mt-4 overflow-hidden d-flex justify-content-center simplebar-content"
-        style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '10px',
-        }}
-      >
+      <div className="mt-4 overflow-hidden flex justify-center bg-white p-5 rounded-xl">
         <PreviewPDFContainer
           assortment={assortment as unknown as AssortmentPCF}
         />
