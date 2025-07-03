@@ -37,7 +37,9 @@
     "excelForm": "Download Excel",
     "images": "Download Images",
     "allPdf": "DOWNLOAD ALL PACKING INSTRUCTIONS - PDF",
-    "allExcel": "DOWNLOAD ALL PACKING INSTRUCTIONS - EXCEL"
+    "allExcel": "DOWNLOAD ALL PACKING INSTRUCTIONS - EXCEL",
+    "excelSharepoint": "SAVE EXCEL FORM IN SHAREPOINT",
+    "pdfSharepoint": "SAVE PDF FORM IN SHAREPOINT"
   },
   "keyPlaceholder_name": "Enter name",
   "keyPlaceholder_customerSelect": "Select a customer",

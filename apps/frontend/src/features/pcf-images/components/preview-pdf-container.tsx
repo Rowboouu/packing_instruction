@@ -13,8 +13,6 @@ import { format } from 'date-fns';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { PCFImageContent } from '..';
-import { ProductSection } from './container-product-section';
-import { ProtectedSection } from './container-protected-section';
 
 interface PreviewPDFContainerProps {
   assortment: AssortmentPCF;
@@ -30,19 +28,13 @@ export const PreviewPDFContainer = React.forwardRef<
   const groupedImages = groupPCFImages(assortment?.pcfImages || []);
 
   const today = format(new Date(), 'MMMM-dd,yyyy');
-  const masterUccLabel = groupedImages.masterUccLabel?.[0];
-  const innerItemLabel = groupedImages.innerItemLabel?.[0];
-  const innerUccLabel = groupedImages.innerUccLabel?.[0];
-  const upcLabelFront = groupedImages.upcLabelFront?.[0];
-  const upcLabelBack = groupedImages.upcLabelBack?.[0];
-  const masterCarton = groupedImages.masterCarton?.[0];
-  const innerCarton = groupedImages.innerCarton?.[0];
-  const masterShippingMark = groupedImages.masterShippingMark?.[0];
-  const innerItemUccLabel = groupedImages.innerItemUccLabel?.[0];
 
-  const upcPlacement = groupedImages.upcPlacement || [];
-  const productPictures = groupedImages.productPictures || [];
-  const protectivePackaging = groupedImages.protectivePackaging || [];
+  // Extract images based on the new schema sections
+  const itemPackImages = groupedImages.itemPackImages || [];
+  const itemBarcodeImages = groupedImages.itemBarcodeImages || [];
+  const displayImages = groupedImages.displayImages || [];
+  const innerCartonImages = groupedImages.innerCartonImages || [];
+  const masterCartonImages = groupedImages.masterCartonImages || [];
 
   const edit = useEditAssortment();
 
@@ -97,609 +89,506 @@ export const PreviewPDFContainer = React.forwardRef<
 
   return (
     <Form {...form}>
-      <div ref={ref} className="pdf-container">
-        <div className="pdf-header-container pdf-title-container">
-          <span>GIFTCRAFT PACKAGING CONFIRMATION FORM</span>
+      <div ref={ref} className="w-full max-w-4xl mx-auto bg-white">
+        {/* Header Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-lg font-bold">PACKING INSTRUCTION</span>
         </div>
-        <table>
-          <tbody>
-            <tr>
-              <td>
-                <span className="pdf-text">Vendor Name:</span>
-                <span className="pdf-text">1000 Miles Limited</span>
-              </td>
-              <td
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                }}
-              >
-                <div>
-                  <span className="pdf-text">Vendor Code: </span>
-                  <span className="pdf-text">10001</span>
-                </div>
-                <div>
-                  <span className="pdf-text">Date: </span>
-                  <span className="pdf-text">{today}</span>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <span className="pdf-text">P.O. #: </span>
-                <span className="pdf-text">{orderData?.customerPoNo}</span>
-              </td>
-              <td className="d-flex">
-                <span className="pdf-text">Item #: </span>
-                <span className="pdf-text">{assortment.customerItemNo}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="pdf-section-container" style={{ width: '160px' }}>
-          <span>Master Carton</span>
-        </div>
-        <div className="pdf-header-container">
-          <table>
-            <tbody>
-              <tr>
-                <td>
-                  <span
-                    style={{
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    Shipping Mark - Print of four sides of the carton
-                  </span>
-                </td>
-                <td>
-                  <span>UCC 128 Label for Master Carton</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <table>
-          <tbody>
-            <tr>
-              <td className="border-full">
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    paddingTop: '10px',
-                    flexDirection: 'column',
-                    height: '100%',
-                    gap: '5px',
-                  }}
-                >
-                  <div>
-                    <div
-                      className="image-container"
-                      style={{
-                        width: '60%',
-                      }}
-                    >
-                      <img
-                        style={{
-                          height: '80px',
-                          objectFit: 'contain',
-                        }}
-                        src="/api/static/images/gc_logo.png"
-                        alt="gc_logo"
-                      />
-                    </div>
-                    <table className="w-50">
-                      <tbody>
-                        <tr>
-                          <td className="pdf-text">ITEM #:</td>
-                          <td className="pdf-text">
-                            {assortment.customerItemNo}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="pdf-text">PO #:</td>
-                          <td className="pdf-text">
-                            {orderData?.customerPoNo}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="pdf-text">QTY.:</td>
-                          <td className="d-flex" style={{ gap: '5px' }}>
-                            <FormField
-                              control={form.control}
-                              name="productInCarton"
-                              render={({ field }) => (
-                                <EditableField
-                                  className="pdf-text form-control"
-                                  {...field}
-                                  onBlurField={handleOnBlurUpdate}
-                                />
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="unit"
-                              render={({ field }) => (
-                                <EditableField
-                                  className="pdf-text form-control"
-                                  {...field}
-                                  onBlurField={handleOnBlurUpdate}
-                                />
-                              )}
-                            />
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="pdf-text">CUBIC MEAS.:</td>
-                          <td className="d-flex" style={{ gap: '5px' }}>
-                            <FormField
-                              control={form.control}
-                              name="masterCUFT"
-                              render={({ field }) => (
-                                <EditableField
-                                  className="pdf-text form-control"
-                                  {...field}
-                                  isParse
-                                  onBlurField={handleOnBlurUpdate}
-                                />
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="cubicUnit"
-                              render={({ field }) => (
-                                <EditableField
-                                  className="pdf-text form-control"
-                                  {...field}
-                                  onBlurField={handleOnBlurUpdate}
-                                />
-                              )}
-                            />
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="pdf-text">GROSS WT:</td>
-                          <td className="d-flex" style={{ gap: '5px' }}>
-                            <FormField
-                              control={form.control}
-                              name="masterGrossWeight"
-                              render={({ field }) => (
-                                <EditableField
-                                  className="pdf-text form-control"
-                                  {...field}
-                                  isParse
-                                  onBlurField={handleOnBlurUpdate}
-                                />
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="wtUnit"
-                              render={({ field }) => (
-                                <EditableField
-                                  className="pdf-text form-control"
-                                  {...field}
-                                  onBlurField={handleOnBlurUpdate}
-                                />
-                              )}
-                            />
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div>
-                      <span className="pdf-text">
-                        MADE IN China / FABRIQUE EN Chine
-                      </span>
-                    </div>
-                  </div>
-                  <div className="pdf-text pdf-flex-default align-items-center">
-                    <span>
-                      <strong> CUSTOMER SERVICE </strong>
-                    </span>
-                    <span>
-                      <strong>CANADA</strong> 1-877-387-9777 /
-                      <strong>U.S.A.</strong> 1-877-387-4888
-                    </span>
-                    <a href="https://www.giftcraft.com">www.giftcraft.com </a>
-                  </div>
-                </div>
-              </td>
-              <td className="border-full">
-                <div
-                  className="pdf-flex-default"
-                  style={{
-                    padding: '10px 0 5px',
-                  }}
-                >
-                  <span className="pdf-text">
-                    Attach a jpeg scan of the actual UCC label.
-                  </span>
-                  <span className="pdf-text">
-                    pictures of UCC labels cannot be read by a barcode reader
-                    device.
-                  </span>
-                </div>
-                <div
-                  className="image-container"
-                  style={{
-                    padding: '2px',
-                    minHeight: '240px',
-                  }}
-                >
-                  <PCFImageContent
-                    pcfImage={masterUccLabel}
-                    height={240}
-                    maxWidth={450}
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="pdf-section-container" style={{ width: '160px' }}>
-          <span>Inner Carton</span>
-        </div>
-        <div className="pdf-header-container">
-          <table>
-            <tbody>
-              <tr>
-                <td>
-                  <span
-                    style={{
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    Shipping Mark - Print on one side of the carton
-                  </span>
-                </td>
-                <td>
-                  <span>UCC 128 Label for Inner Carton</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <table>
-          <tbody>
-            <tr>
-              <td className="border-full">
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    paddingTop: '20px',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '150px',
-                    }}
-                  >
-                    <table>
-                      <tbody>
-                        <tr>
-                          <td className="pdf-text">ITEM #:</td>
-                          <td>{assortment.customerItemNo}</td>
-                        </tr>
-                        <tr>
-                          <td className="pdf-text">QTY.:</td>
-                          <td className="d-flex" style={{ gap: '5px' }}>
-                            <FormField
-                              control={form.control}
-                              name="productPerUnit"
-                              render={({ field }) => (
-                                <EditableField
-                                  className="pdf-text form-control"
-                                  {...field}
-                                  onBlurField={handleOnBlurUpdate}
-                                />
-                              )}
-                            />
 
-                            <FormField
-                              control={form.control}
-                              name="unit"
-                              render={({ field }) => (
-                                <EditableField
-                                  className="pdf-text form-control"
-                                  {...field}
-                                  onBlurField={handleOnBlurUpdate}
-                                />
-                              )}
-                            />
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="image-container" style={{ height: '200px' }}>
-                    <PCFImageContent
-                      pcfImage={innerItemLabel}
-                      height={200}
-                      maxWidth={350}
-                    />
-                  </div>
-                </div>
-              </td>
-              <td className="border-full">
-                <div
-                  className="pdf-flex-default"
-                  style={{
-                    padding: '15px 0 5px',
-                  }}
-                >
-                  <span className="pdf-text">
-                    Attach a jpeg scan of the actual UCC label. Digital pictures
-                    of
-                  </span>
-                  <span className="pdf-text">
-                    UCC labels cannot be read by a barcode reader device.
-                  </span>
-                </div>
-                <div className="image-container" style={{ height: '160px' }}>
-                  <PCFImageContent
-                    pcfImage={innerUccLabel}
-                    height={160}
-                    maxWidth={350}
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="d-flex align-items-center">
-          <div className="pdf-section-container" style={{ width: '160px' }}>
-            <span>UPC Label</span>
-          </div>
-          <span
-            className="pdf-text"
-            style={{
-              paddingLeft: '10px',
-            }}
-          >
-            To be placed on each product
-          </span>
-        </div>
-        <table>
-          <tbody>
-            <tr
-              style={{
-                height: '315px',
-              }}
-            >
-              <td className="border-full">
-                <div className="pdf-flex-default">
-                  <span className="pdf-text fw-bold">Front of UPC label</span>
-                  <span className="pdf-text">
-                    Attach a jpeg scan of the actual UCC label. Digital pictures
-                    of
-                  </span>
-                  <span className="pdf-text">
-                    UCC labels cannot be read by a barcode reader device.
-                  </span>
-                </div>
-                <div
-                  className="border-t border-r image-container"
-                  style={{
-                    marginTop: '5px',
-                    width: 'fit-content',
-                    minWidth: '275px',
-                    height: '265px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <PCFImageContent
-                    pcfImage={upcLabelFront}
-                    height={260}
-                    maxWidth={375}
-                  />
-                </div>
-              </td>
-              <td className="border-full">
-                <div className="pdf-flex-default">
-                  <span className="pdf-text fw-bold">Front of UPC label</span>
-                  <span className="pdf-text">
-                    Attach a jpeg scan of the actual UCC label. Digital pictures
-                    of
-                  </span>
-                  <span className="pdf-text">
-                    UCC labels cannot be read by a barcode reader device.
-                  </span>
-                </div>
-                <div
-                  className="border-t border-r image-container"
-                  style={{
-                    marginTop: '5px',
-                    width: 'fit-content',
-                    minWidth: '275px',
-                    height: '265px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <PCFImageContent
-                    pcfImage={upcLabelBack}
-                    height={260}
-                    maxWidth={375}
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="pdf-flex-default border-l">
-          <span className="pdf-text fw-bold">
-            Pictures of UPC Placement on product
-          </span>
-          <span className="text-default">
-            Attach digital pictures of product with UPC codes attached.
-          </span>
-        </div>
-        <div className="position-relative border-full">
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              width: '100%',
-              gap: '10px',
-              minHeight: '200px',
-              padding: '2px',
-            }}
-          >
-            {upcPlacement.map((image) => (
-              <PCFImageContent
-                key={image._id}
-                pcfImage={image}
-                height={200}
-                maxWidth={450}
+        {/* Basic Info Section */}
+        <div className="space-y-4 mb-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">DESCRIPTIONS:</span>
+              <input
+                type="text"
+                className="ml-2 border border-gray-300 px-2 py-1 w-64 rounded-md"
+                defaultValue={
+                  assortment.name || 'Beer Opener Keychain with Display'
+                }
               />
-            ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">ITEM NUMBER:</span>
+              <input
+                type="text"
+                className="ml-2 border border-gray-300 px-2 py-1 w-32 rounded-md"
+                defaultValue={assortment.itemNo || 'A000026'}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">CUSTOMER ITEM NUMBER:</span>
+              <input
+                type="text"
+                className="ml-2 border border-gray-300 px-2 py-1 w-32 rounded-md"
+                defaultValue={assortment.customerItemNo || 'FAR-0013'}
+              />
+            </div>
           </div>
         </div>
-        <br />
-        <table
-          style={{
-            // pageBreakBefore: 'always',
-            pageBreakInside: 'avoid',
-          }}
-        >
-          <tbody>
-            <tr
-              style={{
-                backgroundColor: '#c0c0c0',
-              }}
-            >
-              <td className="border-full text-center">
-                <span className="pdf-text fw-bold text-center">
-                  Master Carton Markings Pictures
-                </span>
-              </td>
-              <td className="border-full text-center">
-                <span className="pdf-text fw-bold text-center">
-                  Inner Carton Markings Pictures
-                </span>
-              </td>
-            </tr>
-            <tr>
-              <td className="border-full" style={{ borderBottom: 'none' }}>
-                <span>
-                  Attach digital picture of master carton markings here.
-                </span>
-                <div className="image-container" style={{ minHeight: '100px' }}>
-                  <PCFImageContent
-                    pcfImage={masterCarton}
-                    height={325}
-                    maxWidth={450}
-                  />
-                </div>
-              </td>
-              <td className="border-full" style={{ borderBottom: 'none' }}>
-                <span>Attach a picture of inner carton markings here.</span>
-                <div className="image-container" style={{ minHeight: '100px' }}>
-                  <PCFImageContent
-                    pcfImage={innerCarton}
-                    height={325}
-                    maxWidth={450}
-                  />
-                </div>
-              </td>
-            </tr>
 
-            <tr>
-              <td className="border-full" style={{ borderTop: 'none' }}>
-                <div
-                  className="mt-4 image-container"
-                  style={{ minHeight: '100px' }}
-                >
-                  <PCFImageContent
-                    pcfImage={masterShippingMark}
-                    height={350}
-                    maxWidth={450}
-                  />
-                </div>
-              </td>
-              <td className="border-full" style={{ borderTop: 'none' }}>
-                <div
-                  className="mt-4 image-container"
-                  style={{ minHeight: '100px' }}
-                >
-                  <PCFImageContent
-                    pcfImage={innerItemUccLabel}
-                    height={350}
-                    maxWidth={450}
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {/* Finish Product Images Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">FINISH PRODUCT IMAGES</span>
+        </div>
 
-        <div
-          style={{
-            pageBreakInside: 'avoid',
-          }}
-        >
-          <div className="pdf-section-container justify-content-center">
-            <span>Product Pictures</span>
-          </div>
-          {/* Images section  */}
-          <ProductSection pcfImages={productPictures} />
+        <div className="border border-gray-300 p-4 mb-6 min-h-64 flex items-center justify-center">
+          <PCFImageContent
+            pcfImage={itemPackImages[0]}
+            height={240}
+            maxWidth={400}
+          />
         </div>
-        <div
-          style={{
-            pageBreakInside: 'avoid',
-          }}
-        >
-          <div className="pdf-section-container justify-content-center">
-            <span>Protective Packaging Pictures</span>
-          </div>
-          {/* Images section  */}
-          <ProtectedSection pcfImages={protectivePackaging} />
+
+        {/* How to Pack Single Product Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">
+            HOW TO PACK THE SINGLE PRODUCT?
+          </span>
         </div>
-        <div
-          style={{
-            pageBreakInside: 'avoid',
-          }}
-        >
-          <div className="pdf-section-container justify-content-center">
-            <span>
-              Additional Space for pictures or description of protective
-              packaging.
-            </span>
+
+        <div className="border border-gray-300 p-4 mb-4">
+          <textarea
+            className="w-full h-16 p-2 border border-gray-300 text-sm rounded-md"
+            placeholder="1 PC with one basket card put into OPP Bag OPP"
+          />
+        </div>
+
+        <div className="mb-4">
+          <div className="flex items-center mb-2">
+            <span className="font-medium mr-4">LABEL TYPE:</span>
+            <select className="border border-gray-300 px-3 py-1 rounded-md">
+              <option>Non - Removable</option>
+            </select>
           </div>
-          <div className="border-full" style={{ height: '200px' }}></div>
-          <table>
-            <tbody>
-              <tr className="border-full">
-                <td className="border-full">
-                  <div className="d-flex flex-column">
-                    <span className="fw-bold" style={{ fontSize: '9pt' }}>
-                      Inner carton packaging passes 90 cm drop test: YES
-                    </span>
-                    <span style={{ fontSize: '9pt' }}>
-                      Inner carton packaging passes others: _ _ _ _ _ _ _ _ _ _
-                      _<strong>YES</strong>
-                    </span>
-                  </div>
-                </td>
-                <td className="border-full">
-                  <div className="d-flex flex-column">
-                    <span className="fw-bold" style={{ fontSize: '9pt' }}>
-                      Master carton packaging passes 90 cm drop test: YES
-                    </span>
-                    <span style={{ fontSize: '9pt' }}>
-                      Master carton packaging passes others:_ _ _ _ _ _ _ _ _ _
-                      _<strong>YES</strong>
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        </div>
+
+        {/* Product Assembly Visualization */}
+        <div className="border border-gray-300 p-4 mb-6">
+          <div className="flex items-center justify-center space-x-8">
+            <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={itemPackImages[0]}
+                height={180}
+                maxWidth={180}
+              />
+            </div>
+            <div className="text-4xl font-bold">+</div>
+            <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={itemPackImages[1]}
+                height={180}
+                maxWidth={180}
+              />
+            </div>
+            <div className="text-4xl">→</div>
+            <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={itemPackImages[2]}
+                height={180}
+                maxWidth={180}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Barcode Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">BARCODE</span>
+        </div>
+
+        <div className="border border-gray-300 p-4 mb-6 min-h-48 flex items-center justify-center">
+          <PCFImageContent
+            pcfImage={itemBarcodeImages[0]}
+            height={180}
+            maxWidth={300}
+          />
+        </div>
+
+        {/* How to Pack Inner Carton Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">
+            HOW TO PACK INNER CARTON OR INNER PACK IN OPP?
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="font-medium mr-4">INNER PACK TYPE:</span>
+              <select className="border border-gray-300 px-3 py-1 flex-1 rounded-md">
+                <option>Display with Inner Carton</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="font-medium mr-4">QTY / DESIGN:</span>
+              <FormField
+                control={form.control}
+                name="productPerUnit"
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="text"
+                    className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                    defaultValue="8"
+                    onBlur={handleOnBlurUpdate}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="font-medium mr-4">NUMBER OF DESIGN:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="3"
+              />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="font-medium mr-4">TOTAL QTY / INNER:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="24"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Display Packing Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">DISPLAY PACKING</span>
+        </div>
+
+        <div className="border border-gray-300 p-4 mb-6">
+          <div className="grid grid-cols-4 gap-4 items-center">
+            <div className="flex flex-col items-center">
+              <div className="w-32 h-32 bg-gray-100 border border-gray-300 mb-2 flex items-center justify-center">
+                <PCFImageContent
+                  pcfImage={displayImages[0]}
+                  height={120}
+                  maxWidth={120}
+                />
+              </div>
+            </div>
+            <div className="text-3xl text-center">+</div>
+            <div className="flex flex-col items-center">
+              <div className="w-32 h-32 bg-gray-100 border border-gray-300 mb-2 flex items-center justify-center">
+                <PCFImageContent
+                  pcfImage={displayImages[1]}
+                  height={120}
+                  maxWidth={120}
+                />
+              </div>
+            </div>
+            <div className="text-3xl text-center">+</div>
+          </div>
+
+          <div className="flex items-center justify-center mt-4">
+            <div className="text-3xl mr-4">+</div>
+            <div className="w-48 h-32 bg-gray-100 border border-gray-300 mr-4 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={displayImages[2]}
+                height={120}
+                maxWidth={180}
+              />
+            </div>
+            <div className="text-3xl mr-4">→</div>
+            <div className="w-48 h-32 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={displayImages[3]}
+                height={120}
+                maxWidth={180}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Inner Carton Packing Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">INNER CARTON PACKING</span>
+        </div>
+
+        <div className="border border-gray-300 p-4 mb-4">
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <span className="font-medium mr-2">LENGTH:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="3"
+              />
+            </div>
+            <div>
+              <span className="font-medium mr-2">WIDTH:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="3"
+              />
+            </div>
+            <div>
+              <span className="font-medium mr-2">HEIGHT:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="3"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center space-x-8 mb-6">
+            <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={innerCartonImages[0]}
+                height={180}
+                maxWidth={180}
+              />
+            </div>
+            <div className="text-4xl">+</div>
+            <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={innerCartonImages[1]}
+                height={180}
+                maxWidth={180}
+              />
+            </div>
+            <div className="text-4xl">→</div>
+            <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={innerCartonImages[2]}
+                height={180}
+                maxWidth={180}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Inner Carton/Pack Mark Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">INNER CARTON/PACK MARK</span>
+        </div>
+
+        <div className="border border-gray-300 p-4 mb-4">
+          <div className="mb-4">
+            <span className="font-medium mr-4">LOCATION:</span>
+            <input
+              type="text"
+              className="border border-gray-300 px-2 py-1 w-80 rounded-md"
+              defaultValue="2 MAIN SIDE OF THE INNER CARTON"
+            />
+          </div>
+          <div className="flex items-center justify-center">
+            <div className="flex flex-col border border-black p-8 max-w-[300px] bg-white text-left">
+              <div className="text-lg font-bold">SPLASH</div>
+              <div className="text-lg font-bold">ITEM NO.: ONE73S</div>
+              <div className="text-lg font-bold">MADE IN CHINA</div>
+              <div className="text-lg font-bold">QTY: 1 SET</div>
+            </div>
+          </div>
+        </div>
+
+        {/* How to Pack Master Carton Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">HOW TO PACK MASTER CARTON?</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="font-medium mr-4">MASTER CARTON PACK:</span>
+              <select className="border border-gray-300 px-3 py-1 flex-1 rounded-md">
+                <option>Display with Inner Carton</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="font-medium mr-4">
+                NUMBER OF INNER PACK/CARTON:
+              </span>
+              <FormField
+                control={form.control}
+                name="productInCarton"
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="text"
+                    className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                    defaultValue="4"
+                    onBlur={handleOnBlurUpdate}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="font-medium mr-4">INNER PACK/CARTON QTY:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="3"
+              />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center mb-2">
+              <span className="font-medium mr-4">TOTAL QTY/MASTER CARTON:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="96"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Master Carton Pack Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">MASTER CARTON PACK</span>
+        </div>
+
+        <div className="border border-gray-300 p-4 mb-4">
+          <div className="text-sm mb-4 space-y-1">
+            <div>
+              1. 4 Inner Pack will go in 1 master carton (96Pcs in total)
+            </div>
+            <div>
+              2. Put 2 Male Marks &amp; 2 Side marks on the Master Carton
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <span className="font-medium mr-2">LENGTH:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="3"
+              />
+            </div>
+            <div>
+              <span className="font-medium mr-2">WIDTH:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="3"
+              />
+            </div>
+            <div>
+              <span className="font-medium mr-2">HEIGHT:</span>
+              <input
+                type="text"
+                className="border border-gray-300 px-2 py-1 w-16 rounded-md"
+                defaultValue="3"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center space-x-8">
+            <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={innerCartonImages[0]}
+                height={180}
+                maxWidth={180}
+              />
+            </div>
+            <div className="text-4xl">→</div>
+            <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+              <PCFImageContent
+                pcfImage={masterCartonImages[0]}
+                height={180}
+                maxWidth={180}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Shipping Mark Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">MAIN SHIPPING MARK</span>
+        </div>
+
+        <div className="border border-gray-300 p-4 mb-4">
+          <div className="mb-4">
+            <span className="font-medium mr-4">LOCATION:</span>
+            <input
+              type="text"
+              className="border border-gray-300 px-2 py-1 w-80 rounded-md"
+              defaultValue="2 MAIN SIDE OF THE MASTER CARTON"
+            />
+          </div>
+
+          <div className="flex items-center justify-center">
+            <div className="border border-black p-4 bg-white text-center min-w-[300px]">
+              <div className="flex justify-end space-x-4 mb-4">
+                <div className="w-8 h-8 border border-black flex items-center justify-center">
+                  ⚘
+                </div>
+                <div className="w-8 h-8 border border-black flex items-center justify-center">
+                  🍷
+                </div>
+                <div className="w-8 h-8 border border-black flex items-center justify-center">
+                  ⬆
+                </div>
+              </div>
+              <div className="flex flex-col text-left">
+                <div className="text-lg font-bold">SPLASH</div>
+                <div className="text-lg font-bold">ITEM NO.: ONE73S</div>
+                <div className="text-lg font-bold">P.O. NO.: 16713</div>
+                <div className="text-lg font-bold">MADE IN CHINA</div>
+                <div className="text-lg font-bold">CTN. NO.: ___/15</div>
+                <div className="text-lg font-bold">082024</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Side Shipping Mark Section */}
+        <div className="bg-black text-white text-center py-2 mb-4">
+          <span className="text-sm font-bold">SIDE SHIPPING MARK</span>
+        </div>
+
+        <div className="border border-gray-300 p-4 mb-4">
+          <div className="mb-4">
+            <span className="font-medium mr-4">LOCATION:</span>
+            <input
+              type="text"
+              className="border border-gray-300 px-2 py-1 w-80 rounded-md"
+              defaultValue="2 SHORT SIDE OF THE MASTER CARTON"
+            />
+          </div>
+          <div className="flex items-center justify-center">
+            <div className="border border-black p-1 bg-white text-left max-w-[300px]">
+              <div className="text-lg font-bold">QTY: 4 SETS</div>
+              <div className="text-lg font-bold">
+                G.W.: {form.watch('masterGrossWeight') || '___'}
+                {form.watch('wtUnit') || 'KGS'}
+              </div>
+              <div className="text-lg font-bold">N. W.: ___KGS</div>
+              <div className="text-lg font-bold">
+                MEAS: {form.watch('masterCUFT') || '___'}
+                {form.watch('cubicUnit') === 'cuft' ? 'CM' : 'CM'}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Form>
