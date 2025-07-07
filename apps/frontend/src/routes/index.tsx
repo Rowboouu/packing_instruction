@@ -11,19 +11,12 @@ const { Page404 } = lazyImport(
   () => import('@/components/page-404'),
   'Page404',
 );
-// const { AccountEmailRoutes } = lazyImport(() => import('@/features/account-emails'), 'AccountEmailRoutes');
-// const { GroupRoutes } = lazyImport(() => import('@/features/groups'), 'GroupRoutes');
-// const { SalesOrderRoutes } = lazyImport(() => import('@/features/sales-orders'), 'SalesOrderRoutes');
+
 const { PackingInstructionPage } = lazyImport(
   () => import('@/features/packing-instructions'),
   'PackingInstructionPage',
 );
 
-// const { CustomersRoutes } = lazyImport(() => import('@/features/customers'), 'CustomersRoutes');
-// const { TemplatesRoutes } = lazyImport(() => import('@/features/templates'), 'TemplatesRoutes');
-// const { UserRoutes } = lazyImport(() => import('@/features/users'), 'UserRoutes');
-
-// App layout component (previously in protected.tsx)
 const AppLayout = () => {
   return (
     <MainLayout>
@@ -41,24 +34,16 @@ const AppLayout = () => {
   );
 };
 
-// Static list of all application routes.
-// The permission check for '/config/*' routes has been removed.
 const appRoutes = [
   {
     path: '/',
     element: <AppLayout />,
     children: [
-      // { path: '/groups/*', element: <GroupRoutes /> },
       { path: '', element: <Navigate to="/packing-instruction" replace /> },
       {
         path: '/packing-instruction/:identifier',
         element: <PackingInstructionPage />,
-      },
-      // { path: '/sales-orders/*', element: <SalesOrderRoutes /> },
-      // { path: '/config/customers/*', element: <CustomersRoutes /> },
-      // { path: '/config/templates/*', element: <TemplatesRoutes /> },
-      // { path: '/users/*', element: <UserRoutes /> },
-      // { path: '/emails/*', element: <AccountEmailRoutes /> },
+      }
     ],
   },
 ];
