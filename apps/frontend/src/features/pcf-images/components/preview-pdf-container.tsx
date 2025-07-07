@@ -2,10 +2,10 @@
 import { Form, FormField } from '@/components/ui/form';
 import { AssortmentPCF } from '@/features/assortments';
 import {
-  EditAssortmentDTO,
-  editAssormentSchema,
-  useEditAssortment,
-} from '@/features/assortments/api/editAssortment';
+  UpdateAssortmentDTO,
+  updateAssortmentSchema,
+  useUpdateAssortment,
+} from '@/features/assortments/api/updateAssortment';
 // import { useGetSalesOrderOrderId } from '@/features/sales-orders/api/getSaleOrderByOrderId';
 import { groupPCFImages } from '@/utils/pcf-util';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,10 +39,10 @@ export const PreviewPDFContainer = React.forwardRef<
   const innerCartonImages = groupedImages.innerCartonImages || [];
   const masterCartonImages = groupedImages.masterCartonImages || [];
 
-  const edit = useEditAssortment();
+  const update = useUpdateAssortment();
 
-  const form = useForm<EditAssortmentDTO>({
-    resolver: zodResolver(editAssormentSchema),
+  const form = useForm<UpdateAssortmentDTO>({
+    resolver: zodResolver(updateAssortmentSchema),
   });
 
   const [isFocused, setFocused] = React.useState(false);
@@ -56,7 +56,7 @@ export const PreviewPDFContainer = React.forwardRef<
   React.useEffect(() => {
     if (isDirty && isFocused) {
       const values = form.getValues();
-      edit.mutate(values);
+      update.mutate(values);
     } else {
       setFocused(false);
     }

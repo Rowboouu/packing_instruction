@@ -13,4 +13,5 @@ export const QUERY_KEYS = {
   ASSORTMENTS: 'assortments',
   REPORT_PREVIEWS: 'report-previews',
   INFINITE_UPLOAD_EVENTS: 'infinite-event-uploads',
+  PACKING_INSTRUCTION: 'packing-instruction',
 };

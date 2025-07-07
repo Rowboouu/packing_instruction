@@ -13,6 +13,7 @@ export interface QueryParams extends QueryMeta {
   status?: string;
   limit?: number;
   page?: number;
+  salesOrderId?: string;
 }
 
 export interface APIResponse {

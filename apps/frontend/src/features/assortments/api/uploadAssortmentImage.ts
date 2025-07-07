@@ -22,43 +22,41 @@ export type UploadAssortmentImageDTO = z.infer<
   typeof uploadAssortmentImageSchema
 >;
 
-export async function uploadAssormentImage({
+export async function uploadImages({
   _id,
   ...data
-}: UploadAssortmentImageDTO) {
+}: {
+  _id: string;
+} & UploadImageDTO) {
   const formData = new FormData();
+  // ... keep your existing FormData logic ...
 
-  Object.keys(data).forEach((key) => {
-    const value = data[key as keyof UploadImageDTO];
-    if (value instanceof File) {
-      formData.append(key, value);
-    } else if (Array.isArray(value)) {
-      value.forEach((file, index) => {
-        formData.append(`${key}[${index}]`, file);
-      });
-    } else if (typeof value === 'object' && value !== null) {
-      // Handle imageLabels object
-      formData.append(key, JSON.stringify(value));
-    } else if (value !== undefined && value !== null) {
-      formData.append(key, value as string | Blob);
-    }
-  });
-
-  const res = await api.patch(`/zulu-assortments/${_id}`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
+  const res = await api.patch(
+    `/packing-instruction/assortment/${_id}/images`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     },
-  });
+  );
   return res.data;
 }
 
-type MutationFnType = typeof uploadAssormentImage;
+export function useUploadImages(options?: MutationConfig<typeof uploadImages>) {
+  return useMutation({
+    ...options,
+    mutationFn: uploadImages,
+  });
+}
+
+type MutationFnType = typeof uploadImages;
 
 export function useUploadAssortmentImage(
   options?: MutationConfig<MutationFnType>,
 ) {
   return useMutation({
     ...options,
-    mutationFn: uploadAssormentImage,
+    mutationFn: uploadImages,
   });
 }

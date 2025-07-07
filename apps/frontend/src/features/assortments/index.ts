@@ -1,4 +1,4 @@
-export * from './api/editAssortment';
+export * from './api/updateAssortment';
 export * from './api/getAssortment';
 export * from './api/getAssortments';
 export * from './api/uploadAssortmentImage';

@@ -2,7 +2,7 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 // import { EMAIL_REDIRECT_KEY } from '@/constant';
 import { Assortment, AssortmentPCF } from '@/features/assortments';
-import { useEditAssortment } from '@/features/assortments/api/editAssortment';
+import { useEditAssortment } from '@/features/assortments/api/updateAssortment';
 import { useTranslation } from 'react-i18next';
 // import { NavLink } from 'react-router-dom';
 import { PreviewPDFContainer, ReportButton } from '..';

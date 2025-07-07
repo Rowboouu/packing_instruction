@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRoutes, Outlet, Navigate  } from 'react-router-dom';
+import { useRoutes, Outlet, Navigate } from 'react-router-dom';
 
 import { MainLayout } from '@/components/layouts/main-layout';
 import { Loader } from '@/components/loader/Loader';
@@ -7,11 +7,18 @@ import { ModalPortal } from '@/components/modal-portal';
 import { lazyImport } from '@/utils/lazyImport';
 
 // Lazy-loaded components and features
-const { Page404 } = lazyImport(() => import('@/components/page-404'),'Page404');
+const { Page404 } = lazyImport(
+  () => import('@/components/page-404'),
+  'Page404',
+);
 // const { AccountEmailRoutes } = lazyImport(() => import('@/features/account-emails'), 'AccountEmailRoutes');
 // const { GroupRoutes } = lazyImport(() => import('@/features/groups'), 'GroupRoutes');
 // const { SalesOrderRoutes } = lazyImport(() => import('@/features/sales-orders'), 'SalesOrderRoutes');
-const { AssortmentsRoutes } = lazyImport(() => import('@/features/assortments'), 'AssortmentsRoutes');
+const { PackingInstructionPage } = lazyImport(
+  () => import('@/features/packing-instructions'),
+  'PackingInstructionPage',
+);
+
 // const { CustomersRoutes } = lazyImport(() => import('@/features/customers'), 'CustomersRoutes');
 // const { TemplatesRoutes } = lazyImport(() => import('@/features/templates'), 'TemplatesRoutes');
 // const { UserRoutes } = lazyImport(() => import('@/features/users'), 'UserRoutes');
@@ -42,8 +49,11 @@ const appRoutes = [
     element: <AppLayout />,
     children: [
       // { path: '/groups/*', element: <GroupRoutes /> },
-      { path: '', element: <Navigate to="/assortments" replace /> },
-      { path: '/Assortments/*', element: <AssortmentsRoutes /> },
+      { path: '', element: <Navigate to="/packing-instruction" replace /> },
+      {
+        path: '/packing-instruction/:identifier',
+        element: <PackingInstructionPage />,
+      },
       // { path: '/sales-orders/*', element: <SalesOrderRoutes /> },
       // { path: '/config/customers/*', element: <CustomersRoutes /> },
       // { path: '/config/templates/*', element: <TemplatesRoutes /> },
