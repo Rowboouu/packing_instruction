@@ -2,7 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { WebhookData } from '../schemas/webhook-data.schema';
+import { IndividualAssortment } from '../schemas/individual-assortment.schema';
 
+// Keep your existing interface
 export interface OdooWebhookPayload {
   salesOrder: {
     id: string;
@@ -60,6 +62,11 @@ export interface OdooWebhookPayload {
   }>;
 }
 
+// New interface for individual assortment payload
+export interface IndividualAssortmentPayload {
+  assortment: any; // Single assortment object
+}
+
 @Injectable()
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
@@ -67,8 +74,11 @@ export class WebhookService {
   constructor(
     @InjectModel(WebhookData.name)
     private readonly webhookDataModel: Model<WebhookData>,
+    @InjectModel(IndividualAssortment.name)
+    private readonly individualAssortmentModel: Model<IndividualAssortment>,
   ) {}
 
+  // Existing sales order webhook methods
   async saveWebhookData(orderName: string, payload: OdooWebhookPayload): Promise<WebhookData> {
     try {
       const metadata = {
@@ -136,6 +146,144 @@ export class WebhookService {
     }
   }
 
+  // NEW: Clean method for saving individual assortments
+  async saveIndividualAssortment(assortment: any): Promise<IndividualAssortment> {
+    try {
+      this.logger.log(`Saving individual assortment: ${assortment.itemNo}`);
+
+      const individualData = {
+        assortmentId: assortment.itemNo,
+        assortmentData: assortment,
+        status: 'received',
+        receivedAt: new Date(),
+        accessCount: 0,
+        metadata: {
+          totalImages: this.countTotalImages([assortment]),
+          source: 'individual_webhook',
+          odooVersion: '17',
+          originalId: assortment._id
+        }
+      };
+
+      // Check if individual assortment already exists
+      const existingIndividual = await this.individualAssortmentModel.findOne({ 
+        assortmentId: assortment.itemNo 
+      });
+
+      if (existingIndividual) {
+        // Update existing individual record
+        this.logger.log(`Updating existing individual assortment: ${assortment.itemNo}`);
+        
+        const updatedData = await this.individualAssortmentModel.findOneAndUpdate(
+          { assortmentId: assortment.itemNo },
+          {
+            ...individualData,
+            accessCount: existingIndividual.accessCount + 1,
+            lastAccessedAt: new Date()
+          },
+          { new: true, upsert: false }
+        );
+
+        this.logger.log(`Successfully updated individual assortment: ${assortment.itemNo}`);
+        return updatedData;
+      } else {
+        // Create new individual record
+        this.logger.log(`Creating new individual assortment: ${assortment.itemNo}`);
+        
+        const newIndividualAssortment = new this.individualAssortmentModel(individualData);
+        const savedData = await newIndividualAssortment.save();
+        
+        this.logger.log(`Successfully created individual assortment: ${assortment.itemNo} with ID: ${savedData._id}`);
+        return savedData;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to save individual assortment ${assortment.itemNo}:`, error);
+      throw error;
+    }
+  }
+
+  // NEW: Clean method for getting individual assortments
+  async getIndividualAssortmentData(assortmentId: string): Promise<any> {
+    try {
+      this.logger.log(`Getting individual assortment data for: ${assortmentId}`);
+      
+      const individualData = await this.individualAssortmentModel.findOne({
+        assortmentId: assortmentId
+      }).exec();
+
+      if (individualData) {
+        this.logger.log(`✅ Found individual assortment: ${assortmentId}`);
+        
+        // Update access count and last accessed time
+        await this.individualAssortmentModel.findOneAndUpdate(
+          { assortmentId: assortmentId },
+          {
+            $inc: { accessCount: 1 },
+            lastAccessedAt: new Date()
+          }
+        );
+
+        // Return the assortment data in the format expected by the frontend
+        return {
+          ...individualData.assortmentData,
+          // Add metadata for the frontend
+          _individualAssortmentId: individualData._id,
+          _accessCount: individualData.accessCount + 1,
+          _lastAccessed: new Date()
+        };
+      }
+
+      this.logger.log(`❌ No individual assortment found for: ${assortmentId}`);
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to get individual assortment data for ${assortmentId}:`, error);
+      return null;
+    }
+  }
+
+  async getAssortmentFromSalesOrder(searchCriteria: any, assortmentId: string): Promise<any> {
+    try {
+        console.log(`🔍 Searching sales order data with criteria:`, searchCriteria);
+        
+        const webhookData = await this.webhookDataModel.findOne(searchCriteria).exec();
+
+        if (!webhookData) {
+        console.log(`❌ No sales order found with criteria:`, searchCriteria);
+        return null;
+        }
+
+        console.log(`✅ Found sales order: ${webhookData.orderName}`);
+
+        // Find the specific assortment within the sales order
+        let assortment: any;
+        
+        if (assortmentId.startsWith('A')) {
+        // Search by itemNo
+        assortment = webhookData.assortments.find(a => a.itemNo === assortmentId);
+        } else {
+        // Search by _id (numeric)
+        const numericId = parseInt(assortmentId, 10);
+        assortment = webhookData.assortments.find(a => a._id === numericId);
+        }
+
+        if (!assortment) {
+        console.log(`❌ Assortment ${assortmentId} not found in sales order ${webhookData.orderName}`);
+        return null;
+        }
+
+        console.log(`✅ Found assortment ${assortmentId} in sales order ${webhookData.orderName}`);
+        
+        return {
+        ...assortment,
+        salesOrder: webhookData.salesOrder,
+        orderName: webhookData.orderName
+        };
+    } catch (error) {
+        this.logger.error(`Failed to search assortment from sales order for ${assortmentId}:`, error);
+        return null;
+    }
+  }
+
   async getWebhookData(orderName: string): Promise<WebhookData | null> {
     try {
       return await this.webhookDataModel.findOne({ orderName }).exec();
@@ -186,8 +334,11 @@ export class WebhookService {
 
   async getRecentWebhooks(limit: number = 50): Promise<WebhookData[]> {
     try {
+      // Exclude individual assortments from recent webhooks list
       return await this.webhookDataModel
-        .find()
+        .find({ 
+          orderName: { $not: /^INDIVIDUAL_/ } // Exclude individual assortment records
+        })
         .sort({ receivedAt: -1 })
         .limit(limit)
         .exec();
@@ -235,21 +386,29 @@ export class WebhookService {
   // Helper method to get webhook statistics
   async getWebhookStats(): Promise<any> {
     try {
-      const total = await this.webhookDataModel.countDocuments();
+      const total = await this.webhookDataModel.countDocuments({
+        orderName: { $not: /^INDIVIDUAL_/ } // Exclude individual assortments
+      });
       const recent = await this.webhookDataModel.countDocuments({
+        orderName: { $not: /^INDIVIDUAL_/ },
         receivedAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
       });
-      const errors = await this.webhookDataModel.countDocuments({ status: 'error' });
+      const errors = await this.webhookDataModel.countDocuments({ 
+        status: 'error',
+        orderName: { $not: /^INDIVIDUAL_/ }
+      });
+      const individualCount = await this.individualAssortmentModel.countDocuments();
 
       return {
         total,
         recent24h: recent,
         errors,
+        individualAssortments: individualCount,
         successRate: total > 0 ? ((total - errors) / total * 100).toFixed(2) + '%' : '0%'
       };
     } catch (error) {
       this.logger.error('Failed to get webhook stats:', error);
-      return { total: 0, recent24h: 0, errors: 0, successRate: '0%' };
+      return { total: 0, recent24h: 0, errors: 0, individualAssortments: 0, successRate: '0%' };
     }
   }
 }

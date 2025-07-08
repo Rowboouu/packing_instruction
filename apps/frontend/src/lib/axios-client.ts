@@ -2,7 +2,7 @@ import Axios, { AxiosError } from 'axios';
 import { toast } from 'sonner';
 
 export const api = Axios.create({
-  baseURL: '/api',
+  baseURL: '/',
   withCredentials: true,
 });
 

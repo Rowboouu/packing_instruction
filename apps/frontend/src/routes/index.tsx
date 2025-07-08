@@ -12,9 +12,9 @@ const { Page404 } = lazyImport(
   'Page404',
 );
 
-const { PackingInstructionPage } = lazyImport(
+const { PackingInstructionOverview } = lazyImport(
   () => import('@/features/packing-instructions'),
-  'PackingInstructionPage',
+  'PackingInstructionOverview',
 );
 
 const AppLayout = () => {
@@ -42,7 +42,7 @@ const appRoutes = [
       { path: '', element: <Navigate to="/packing-instruction" replace /> },
       {
         path: '/packing-instruction/:identifier',
-        element: <PackingInstructionPage />,
+        element: <PackingInstructionOverview />,
       }
     ],
   },

@@ -1,9 +1,10 @@
+// Updated Assortment interfaces to be consistent with webhook payload
 import { FileData } from '@/features/files';
 import { PcfImage } from '@/features/pcf-images';
 
 export interface Assortment {
   _id: string;
-  orderItemId: 19381;
+  orderItemId: number;
   customerItemNo: string | null;
   itemNo: string;
   name: string;
@@ -11,15 +12,31 @@ export interface Assortment {
   productId: number;
   createdAt: string;
   updatedAt: string;
-  status: 'todo' | 'ongoing' | 'completed' | 'approved';
+  status: 'pending' | 'todo' | 'ongoing' | 'completed' | 'approved';
   uploadStatus: 'pending' | 'in-progress' | 'completed';
+  
+  // Dimensions from webhook
+  length_cm: number;
+  width_cm: number;
+  height_cm: number;
+  master_carton_length_cm: number;
+  master_carton_width_cm: number;
+  master_carton_height_cm: number;
+  inner_carton_length_cm: number;
+  inner_carton_width_cm: number;
+  inner_carton_height_cm: number;
+  
+  // Optional legacy image (might not be used with webhook data)
   image?: FileData;
-  masterCUFT: string;
-  masterGrossWeight: string;
-  productInCarton: number;
-  productPerUnit: number;
+  
+  // User-modifiable fields (can be updated via forms)
+  masterCUFT?: number;
+  masterGrossWeight?: number;
+  productInCarton?: number;
+  productPerUnit?: number;
+  
+  // Optional additional fields
   labels?: Record<string, { id: number; value: string; name: string }>[];
-
   itemInCarton?: number;
   itemPerUnit?: number;
   itemCUFT?: number;
@@ -29,6 +46,13 @@ export interface Assortment {
   wtUnit?: string;
 }
 
+// PCF-specific interface with structured images
 export interface AssortmentPCF extends Assortment {
-  pcfImages: PcfImage[];
+  pcfImages: {
+    itemPackImages: PcfImage[][] | any[][]; // Support both user uploads and webhook structure
+    itemBarcodeImages: PcfImage[] | any[];
+    displayImages: PcfImage[] | any[];
+    innerCartonImages: PcfImage[] | any[];
+    masterCartonImages: PcfImage[] | any[];
+  };
 }

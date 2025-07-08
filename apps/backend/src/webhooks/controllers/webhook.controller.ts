@@ -1,22 +1,34 @@
 import { Controller, Post, Get, Param, Body, Res, HttpStatus, Logger } from '@nestjs/common';
 import { Response } from 'express';
-import { WebhookService, OdooWebhookPayload } from '../services/webhook.service';
+import { WebhookService, OdooWebhookPayload, IndividualAssortmentPayload } from '../services/webhook.service';
 
-@Controller('webhook') // Remove 'webhook' prefix
+@Controller('webhook')
 export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 
   constructor(private readonly webhookService: WebhookService) {}
 
+  // Sales order webhook endpoint
   @Post('packing-instruction/:orderName')
-  async handlePackingInstructionWebhook(
+  async handleSalesOrderWebhook(
     @Param('orderName') orderName: string,
     @Body() webhookData: OdooWebhookPayload,
   ) {
     try {
-      this.logger.log(`Received webhook for order: ${orderName}`);
+      // Only handle sales orders (not starting with 'A' or multiple assortments)
+      if (orderName.startsWith('A') && webhookData.assortments?.length === 1) {
+        this.logger.log(`Redirecting individual assortment to proper endpoint: ${orderName}`);
+        return {
+          success: false,
+          error: 'Wrong endpoint for individual assortment',
+          message: `Use POST /webhook/individual-assortment/${orderName} for individual assortments`,
+          redirectTo: `/webhook/individual-assortment/${orderName}`
+        };
+      }
+
+      this.logger.log(`Received sales order webhook: ${orderName}`);
       
-      // Log basic statistics
+      // Handle as sales order
       const stats = {
         orderName,
         customer: webhookData.salesOrder?.customer || 'Unknown',
@@ -24,19 +36,16 @@ export class WebhookController {
         totalImages: this.countTotalImages(webhookData.assortments || [])
       };
       
-      this.logger.log(`Webhook stats:`, JSON.stringify(stats, null, 2));
+      this.logger.log(`Sales order webhook stats:`, JSON.stringify(stats, null, 2));
 
-      // Save webhook data to database
       const savedData = await this.webhookService.saveWebhookData(orderName, webhookData);
-      this.logger.log(`Saved webhook data with ID: ${savedData._id}`);
+      this.logger.log(`Saved sales order webhook data with ID: ${savedData._id}`);
 
-      // Mark as processed
       await this.webhookService.markAsProcessed(orderName);
 
-      // Return success response (no redirect)
       return {
         success: true,
-        message: 'Webhook data saved successfully',
+        message: 'Sales order webhook data saved successfully',
         orderName,
         dataId: savedData._id,
         totalImages: stats.totalImages,
@@ -44,13 +53,67 @@ export class WebhookController {
       };
       
     } catch (error) {
-      this.logger.error(`Webhook error for ${orderName}:`, error);
+      this.logger.error(`Sales order webhook error for ${orderName}:`, error);
       
       return {
         success: false,
-        error: 'Webhook processing failed',
+        error: 'Sales order webhook processing failed',
         message: error.message,
         orderName
+      };
+    }
+  }
+
+  // NEW: Dedicated individual assortment webhook endpoint
+  @Post('individual-assortment/:assortmentId')
+  async handleIndividualAssortmentWebhook(
+    @Param('assortmentId') assortmentId: string,
+    @Body() webhookData: IndividualAssortmentPayload,
+  ) {
+    try {
+      this.logger.log(`Received individual assortment webhook: ${assortmentId}`);
+      
+      if (!webhookData.assortment) {
+        throw new Error('Missing assortment data in webhook payload');
+      }
+
+      const assortment = webhookData.assortment;
+      
+      // Validate that the assortment ID matches
+      if (assortment.itemNo !== assortmentId) {
+        this.logger.warn(`Assortment ID mismatch: URL has ${assortmentId}, data has ${assortment.itemNo}`);
+      }
+
+      // Save as individual assortment (no fake sales order data needed!)
+      const savedData = await this.webhookService.saveIndividualAssortment(assortment);
+      
+      this.logger.log(`Saved individual assortment: ${assortmentId} with ID: ${savedData._id}`);
+
+      const stats = {
+        assortmentId,
+        itemNo: assortment.itemNo,
+        name: assortment.name,
+        totalImages: this.countTotalImages([assortment])
+      };
+
+      return {
+        success: true,
+        message: 'Individual assortment saved successfully',
+        assortmentId,
+        itemNo: assortment.itemNo,
+        dataId: savedData._id,
+        totalImages: stats.totalImages,
+        frontendUrl: `${this.getFrontendUrl()}/packing-instruction/${assortmentId}`
+      };
+
+    } catch (error) {
+      this.logger.error(`Individual assortment webhook error for ${assortmentId}:`, error);
+      
+      return {
+        success: false,
+        error: 'Individual assortment processing failed',
+        message: error.message,
+        assortmentId
       };
     }
   }
@@ -88,29 +151,61 @@ export class WebhookController {
   @Get('assortment/:assortmentId')
   async getAssortmentData(@Param('assortmentId') assortmentId: string) {
     try {
-      const assortmentIdNumber = parseInt(assortmentId, 10);
+      console.log(`🔍 Getting assortment data for: ${assortmentId}`);
       
-      if (isNaN(assortmentIdNumber)) {
+      // First try to get from individual assortment collection
+      const individualData = await this.webhookService.getIndividualAssortmentData(assortmentId);
+      
+      if (individualData) {
+        console.log(`✅ Found individual assortment data for: ${assortmentId}`);
         return {
-          success: false,
-          message: 'Invalid assortment ID format',
+          success: true,
+          data: individualData,
+          source: 'individual',
           assortmentId
         };
       }
 
-      const data = await this.webhookService.getAssortmentData(assortmentIdNumber);
+      // If not found in individual collection, try to find in sales order data
+      // Handle both string IDs (like "A000779") and numeric IDs
+      let searchCriteria: any;
       
-      if (!data) {
+      if (assortmentId.startsWith('A')) {
+        // Search by itemNo for string IDs like "A000779"
+        searchCriteria = { 'assortments.itemNo': assortmentId };
+        console.log(`🔍 Searching by itemNo: ${assortmentId}`);
+      } else {
+        // Try to parse as number for numeric IDs
+        const assortmentIdNumber = parseInt(assortmentId, 10);
+        if (!isNaN(assortmentIdNumber)) {
+          searchCriteria = { 'assortments._id': assortmentIdNumber };
+          console.log(`🔍 Searching by _id: ${assortmentIdNumber}`);
+        } else {
+          console.log(`❌ Invalid assortment ID format: ${assortmentId}`);
+          return {
+            success: false,
+            message: `Invalid assortment ID format: ${assortmentId}`,
+            assortmentId
+          };
+        }
+      }
+
+      const salesOrderData = await this.webhookService.getAssortmentFromSalesOrder(searchCriteria, assortmentId);
+      
+      if (salesOrderData) {
+        console.log(`✅ Found assortment in sales order data: ${assortmentId}`);
         return {
-          success: false,
-          message: `No assortment data found for ID: ${assortmentId}`,
+          success: true,
+          data: salesOrderData,
+          source: 'sales_order',
           assortmentId
         };
       }
 
+      console.log(`❌ Assortment not found: ${assortmentId}`);
       return {
-        success: true,
-        data,
+        success: false,
+        message: `No assortment data found for ID: ${assortmentId}`,
         assortmentId
       };
     } catch (error) {

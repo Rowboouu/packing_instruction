@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Keep this import for row click navigation
 
 import {
   ColumnDef,
@@ -29,8 +29,8 @@ import {
 import { DEFAULT_PAGE, DEFAULT_PAGE_SIZE, StatusType } from '@/constant';
 import { useTypedSearchParams } from '@/hooks/useTypedSearchParams';
 import { DataTableFooter } from './data-table-footer';
-import { DataTablePagination } from './data-table-pagination';
 import { DataTableSkeleton } from './data-table-skeleton';
+import { DataTablePagination } from './data-table-pagination';
 import { DataTableToolbar, ToolBarProps } from './data-table-toolbar';
 
 interface DataTableProps<TData, TValue> {
@@ -56,7 +56,7 @@ export function DataTable<TData, TValue>({
   customPagination,
   pagination,
 }: DataTableProps<TData, TValue>) {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Keep this for row click navigation
   const { params, setParams } = useTypedSearchParams();
 
   const [rowSelection, setRowSelection] = React.useState({});
@@ -156,8 +156,15 @@ export function DataTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
                   onClick={() => {
-                    const id = (row.original as any)._id || (row.original as any).id;
-                    if (id) navigate(`/assortments/${id}`);
+                    // Use itemNo which should already be in 'AXXXXXX' format
+                    const itemId = (row.original as any).itemNo;
+                    if (itemId) {
+                      navigate(`/packing-instruction/${itemId}`, {
+                        state: {
+                        assortmentData: row.original,
+                        fromTable: true
+                      }});
+                    }
                   }}
                   style={{ cursor: 'pointer' }}
                   className="text-900 text-hover-1000"

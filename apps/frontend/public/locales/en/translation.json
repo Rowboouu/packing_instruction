@@ -75,5 +75,7 @@
   "keyField_attachments": "Attachments",
   "keyField_items": "Items",
   "keyMessage_cc": "Specify email addresses separated by comas like john@exmple.com, jane@example.com",
-  "keyButton_attachItems": "Attach Items"
+  "keyButton_attachItems": "Attach Items",
+  "keyMessage_assortmentUpdateError": "Failed to upload images",
+  "keyNavigation_packingInstructions": "Packing Instructions"
 }
