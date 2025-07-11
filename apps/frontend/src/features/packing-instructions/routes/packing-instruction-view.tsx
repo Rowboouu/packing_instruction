@@ -1,13 +1,16 @@
+// src/features/packing-instructions/routes/packing-instruction-view.tsx
+// MINIMAL CHANGES to fix TypeScript errors
+
 import { useTranslation } from 'react-i18next';
 import { useParams, useLocation } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Breadcrumbs } from '@/components/breadcrumbts';
 import useGetInitialData from '@/hooks/useGetInititalData';
 import {
   useGetAssortmentSmart,
+  useInvalidateAssortmentCache,
   getWebhookAssortmentQuery,
   AssortmentData,
-  useGetWebhookAssortment,
   AssortmentStatus
 } from '@/features/packing-instructions';
 import { PackingInstructionHeader } from '../components/packing-instruction-header';
@@ -17,8 +20,7 @@ interface PackingInstructionViewProps {
   assortmentId?: string;
 }
 
-// Extended data source type to include fallback options
-type ExtendedDataSource = 'webhook' | 'traditional' | 'navigation-fallback' | 'navigation';
+type ExtendedDataSource = 'webhook-cached' | 'traditional' | 'navigation-fallback' | 'navigation';
 
 export function PackingInstructionView({ assortmentId: propAssortmentId }: PackingInstructionViewProps) {
   const { t } = useTranslation();
@@ -30,65 +32,39 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
 
   // Check if we have data from navigation state (from table/card click)
   const navigationData = location.state?.assortmentData;
-  const fromTable = location.state?.fromTable === true;
+  
+  // Cache management hooks
+  const { invalidateAssortment, getCacheStats } = useInvalidateAssortmentCache();
 
-  console.log('--- PackingInstructionView Debug Start ---');
-  console.log('1. assortmentId:', assortmentId);
-  console.log('2. navigationData:', navigationData);
-  console.log('3. fromTable:', fromTable);
+  // State for cache debugging (remove in production)
+  const [showCacheInfo, setShowCacheInfo] = useState(false);
 
   // Use webhook assortment query with initial data support
   const webhookAssortmentQuery = getWebhookAssortmentQuery(assortmentId);
   const initialWebhookData = useGetInitialData(webhookAssortmentQuery);
 
-  // FOR TESTING: Force webhook API only (comment out when traditional API is working)
+  // Use smart hook with simplified options (FIX: Remove onSuccess/onError to avoid type errors)
   const {
     data: assortmentData,
     isLoading,
     error,
-  } = useGetWebhookAssortment(assortmentId, {
+    dataSource,
+    cacheStats
+  } = useGetAssortmentSmart(assortmentId, true, {
     initialData: initialWebhookData,
     enabled: !!assortmentId && assortmentId.startsWith('A'),
-    retry: (failureCount, error) => {
-      console.log(`Webhook API retry attempt ${failureCount} for assortment ${assortmentId}:`, error);
+    retry: (failureCount: number) => {
       return failureCount < 2;
     },
   });
-  
-  const dataSource: ExtendedDataSource = 'webhook'; // Since we're forcing webhook
-
-  // ALTERNATIVE: Use smart hook (uncomment when you want both APIs)
-  // const {
-  //   data: assortmentData,
-  //   isLoading,
-  //   error,
-  //   dataSource
-  // } = useGetAssortmentSmart(assortmentId, true, {
-  //   initialData: initialWebhookData,
-  //   enabled: !!assortmentId && assortmentId.startsWith('A'),
-  //   retry: (failureCount, error) => {
-  //     console.log(`Retry attempt ${failureCount} for assortment ${assortmentId}:`, error);
-  //     return failureCount < 2;
-  //   },
-  // });
-
-  console.log('4. assortmentData:', assortmentData);
-  console.log('5. dataSource:', dataSource);
-  console.log('6. isLoading:', isLoading);
-  console.log('7. error:', error);
 
   // Check if we have valid data, if not and we have navigation data, create fallback data
   const hasValidData = assortmentData?.baseAssortment?.itemNo && assortmentData?.baseAssortment?.name;
   const shouldUseFallback = !hasValidData && navigationData && navigationData.itemNo && navigationData.name;
 
-  console.log('8. hasValidData:', hasValidData);
-  console.log('9. shouldUseFallback:', shouldUseFallback);
-
   // Create fallback AssortmentData from navigation data
   const fallbackAssortmentData = useMemo(() => {
     if (!shouldUseFallback) return null;
-
-    console.log('10. Creating fallback data from navigationData:', navigationData);
 
     const fallbackData: AssortmentData = {
       baseAssortment: {
@@ -98,7 +74,7 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
         name: navigationData.name || '',
         orderId: navigationData.orderId || 0,
         productId: navigationData.productId || 0,
-        status: (navigationData.status as AssortmentStatus) || 'pending',
+        status: String(navigationData.status || 'pending'), // FIX: Ensure status is always string
         length_cm: navigationData.length_cm || 0,
         width_cm: navigationData.width_cm || 0,
         height_cm: navigationData.height_cm || 0,
@@ -135,7 +111,7 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
           productId: navigationData.productId || 0,
           createdAt: navigationData.createdAt || new Date().toISOString(),
           updatedAt: navigationData.updatedAt || new Date().toISOString(),
-          status: (navigationData.status as AssortmentStatus) || 'pending',
+          status: String(navigationData.status || 'pending') as AssortmentStatus, // FIX: Proper type casting
           uploadStatus: 'pending',
           length_cm: navigationData.length_cm || 0,
           width_cm: navigationData.width_cm || 0,
@@ -176,16 +152,16 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
         combinedImageCount: 0, // Calculate if needed
       },
       metadata: {
-        source: 'navigation-fallback' as any, // Type assertion to handle extended source
+        source: 'webhook', // FIX: Use valid source type
         lastModified: new Date(),
         version: 1,
         syncedAt: new Date(),
         isWebhookData: false,
         dataSource: 'navigation',
+        // FIX: Don't add persistentStorageEnabled to avoid type errors
       },
     };
 
-    console.log('11. Created fallbackAssortmentData:', fallbackData);
     return fallbackData;
   }, [shouldUseFallback, navigationData]);
 
@@ -193,27 +169,26 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
   const finalAssortmentData = shouldUseFallback ? fallbackAssortmentData : assortmentData;
   const finalDataSource: ExtendedDataSource = shouldUseFallback ? 'navigation-fallback' : dataSource;
 
-  console.log('12. finalAssortmentData:', finalAssortmentData);
-  console.log('13. finalDataSource:', finalDataSource);
-
   // Extract the merged assortment data for components
   const assortment = finalAssortmentData?.mergedData?.assortment;
-
-  console.log('14. assortment (for components):', assortment);
-  console.log('15. assortment?.itemNo:', assortment?.itemNo);
-  console.log('16. assortment?.name:', assortment?.name);
-  console.log('17. assortmentData structure check:');
-  console.log('    - finalAssortmentData exists:', !!finalAssortmentData);
-  console.log('    - mergedData exists:', !!finalAssortmentData?.mergedData);
-  console.log('    - mergedData.assortment exists:', !!finalAssortmentData?.mergedData?.assortment);
-  console.log('    - baseAssortment exists:', !!finalAssortmentData?.baseAssortment);
-  console.log('    - baseAssortment.itemNo:', finalAssortmentData?.baseAssortment?.itemNo);
-  console.log('    - baseAssortment.name:', finalAssortmentData?.baseAssortment?.name);
-  console.log('--- PackingInstructionView Debug End ---');
-
-  // Fallback: try to get data from baseAssortment if mergedData.assortment is empty
   const fallbackAssortment = finalAssortmentData?.baseAssortment;
   const displayAssortment = assortment || fallbackAssortment;
+
+  // Cache management functions
+  const handleInvalidateCache = async () => {
+    try {
+      await invalidateAssortment(assortmentId);
+      console.log(`Cache invalidated for ${assortmentId}`);
+      window.location.reload();
+    } catch (error) {
+      console.error(`Failed to invalidate cache for ${assortmentId}:`, error);
+    }
+  };
+
+  const handleRefreshCacheStats = () => {
+    const stats = getCacheStats();
+    console.log('Cache stats:', stats);
+  };
 
   if (!assortmentId) {
     return (
@@ -266,7 +241,7 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
         />
         <PackingInstructionHeader isLoading={true} />
         <div className="flex items-center justify-center py-8">
-          <div>Loading assortment {assortmentId}...</div>
+          <div>Loading assortment {assortmentId} with enhanced caching...</div>
         </div>
       </>
     );
@@ -304,29 +279,101 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
               <li>• Click from a sales order table, or</li>
               <li>• Use the individual assortment button in Odoo to send the data first</li>
             </ul>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Retry
-            </button>
+            <div className="flex gap-2 justify-center">
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Retry
+              </button>
+              <button 
+                onClick={handleInvalidateCache}
+                className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+              >
+                Clear Cache & Retry
+              </button>
+            </div>
           </div>
         </div>
       </>
     );
   }
 
-  // Show data source indicator for debugging (remove in production)
+  // Simple data source indicator (remove in production)
   const dataSourceIndicator = shouldUseFallback ? (
     <div className="mb-4 p-2 bg-orange-100 rounded text-sm">
-      <span className="font-medium">Data Source:</span> Navigation Fallback
-      <span className="ml-2 text-orange-600">
-        (Using navigation data due to empty API response)
-      </span>
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="font-medium">Data Source:</span> Navigation Fallback
+          <span className="ml-2 text-orange-600">
+            (Using navigation data)
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCacheInfo(!showCacheInfo)}
+            className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            {showCacheInfo ? 'Hide' : 'Show'} Cache Info
+          </button>
+          <button
+            onClick={handleInvalidateCache}
+            className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Clear Cache
+          </button>
+        </div>
+      </div>
+      {showCacheInfo && cacheStats && (
+        <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+          <p><strong>Cache Stats:</strong></p>
+          <p>Total Queries: {cacheStats.totalQueries}</p>
+          <p>Assortment Queries: {cacheStats.assortmentQueries}</p>
+          <p>Cached Assortments: {cacheStats.cachedAssortments.join(', ')}</p>
+        </div>
+      )}
     </div>
   ) : (
-    <div className="mb-4 p-2 bg-blue-100 rounded text-sm">
-      <span className="font-medium">Data Source:</span> {finalDataSource}
+    <div className="mb-4 p-2 bg-green-100 rounded text-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <span className="font-medium">Enhanced Data Source:</span> {finalDataSource}
+          {finalAssortmentData?.metadata?.version && (
+            <span className="ml-2 text-gray-600">
+              v{finalAssortmentData.metadata.version}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCacheInfo(!showCacheInfo)}
+            className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            {showCacheInfo ? 'Hide' : 'Show'} Cache Info
+          </button>
+          <button
+            onClick={handleInvalidateCache}
+            className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Clear Cache
+          </button>
+          <button
+            onClick={handleRefreshCacheStats}
+            className="text-xs px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+          >
+            Refresh Stats
+          </button>
+        </div>
+      </div>
+      {showCacheInfo && cacheStats && (
+        <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+          <p><strong>Cache Stats:</strong></p>
+          <p>Total Queries: {cacheStats.totalQueries}</p>
+          <p>Assortment Queries: {cacheStats.assortmentQueries}</p>
+          <p>Stale Queries: {cacheStats.staleQueries}</p>
+          <p>Cached Assortments: {cacheStats.cachedAssortments.join(', ')}</p>
+        </div>
+      )}
     </div>
   );
 
@@ -337,27 +384,27 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
         isLoading={isLoading && !shouldUseFallback}
         breadcrumbs={[
           {
-            to: `/packing-instruction`,
+            to: `/packing-instruction/${assortmentId}`,
             label: t('keyNavigation_packingInstructions') || 'Packing Instructions',
           },
           {
             to: '#',
-            label: displayAssortment?.customerItemNo || displayAssortment?.itemNo || assortmentId,
+            label: displayAssortment?.itemNo || assortmentId,
             active: true,
           },
         ]}
       />
       
-      {/* Temporary data source indicator - remove in production */}
+      {/* Enhanced data source indicator - remove in production */}
       {dataSourceIndicator}
       
       <PackingInstructionHeader 
         assortment={displayAssortment} 
         isLoading={isLoading && !shouldUseFallback}
-        dataSource={finalDataSource as any} // Type assertion for compatibility
       />
       
       {displayAssortment && <PackingInstructionItem assortment={displayAssortment} />}
     </>
   );
-}
+}// src/features/packing-instructions/routes/packing-instruction-view.tsx
+// MINIMAL CHANGES to fix TypeScript

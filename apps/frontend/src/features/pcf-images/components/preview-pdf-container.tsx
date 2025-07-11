@@ -26,11 +26,42 @@ export const PreviewPDFContainer = React.forwardRef<
   PreviewPDFContainerProps
 >((props, ref) => {
   const { assortment } = props;
-  // const { data: orderData } = useGetSalesOrderOrderId(assortment?.orderId || 0);
 
-  const groupedImages = groupPCFImages(assortment?.pcfImages || []);
+  // FIX: Handle the pcfImages structure properly for groupPCFImages
+  const pcfImagesForGrouping = React.useMemo(() => {
+    const pcfImages = assortment?.pcfImages;
+    
+    if (!pcfImages) return [];
+    
+    // If pcfImages is already an array, use it directly
+    if (Array.isArray(pcfImages)) {
+      return pcfImages;
+    }
+    
+    // If pcfImages is an object with categorized arrays, flatten it
+    if (typeof pcfImages === 'object') {
+      const allImages: any[] = [];
+      Object.values(pcfImages).forEach((imageArray: any) => {
+        if (Array.isArray(imageArray)) {
+          // Handle nested arrays (like itemPackImages)
+          if (Array.isArray(imageArray[0])) {
+            imageArray.forEach((nestedArray: any[]) => {
+              if (Array.isArray(nestedArray)) {
+                allImages.push(...nestedArray);
+              }
+            });
+          } else {
+            allImages.push(...imageArray);
+          }
+        }
+      });
+      return allImages;
+    }
+    
+    return [];
+  }, [assortment?.pcfImages]);
 
-  // const today = format(new Date(), 'MMMM-dd,yyyy');
+  const groupedImages = groupPCFImages(pcfImagesForGrouping);
 
   // Extract images based on the new schema sections
   const itemPackImages = groupedImages.itemPackImages || [];
@@ -76,11 +107,11 @@ export const PreviewPDFContainer = React.forwardRef<
       productPerUnit: assortment.itemPerUnit || assortment.productPerUnit || 0,
       unit: assortment.unit ?? unitVal,
       masterCUFT:
-        assortment.itemCUFT || parseFloat(assortment.masterCUFT ?? '0'),
+        assortment.itemCUFT || assortment.masterCUFT || 0,
       cubicUnit: assortment.cubicUnit ?? 'cuft',
       masterGrossWeight:
         assortment.itemGrossWeight ||
-        parseFloat(assortment.masterGrossWeight ?? '0'),
+        assortment.masterGrossWeight || 0, 
       wtUnit: assortment.wtUnit ?? 'lbs',
     });
   }, [assortment, form]);
@@ -89,6 +120,7 @@ export const PreviewPDFContainer = React.forwardRef<
     resetForm();
     setFocused(false);
   }, [resetForm]);
+
 
   return (
     <Form {...form}>
@@ -231,6 +263,8 @@ export const PreviewPDFContainer = React.forwardRef<
                     className="border border-gray-300 px-3 py-2 rounded-md col-span-2"
                     defaultValue="8"
                     onBlur={handleOnBlurUpdate}
+                    value={field.value?.toString() || ''}
+                    onChange={(e) => field.onChange(e.target.value)}
                   />
                 )}
               />
@@ -409,6 +443,8 @@ export const PreviewPDFContainer = React.forwardRef<
                     className="border border-gray-300 px-3 py-2 col-span-2 rounded-md"
                     defaultValue="4"
                     onBlur={handleOnBlurUpdate}
+                    value={field.value?.toString() || ''}
+                    onChange={(e) => field.onChange(e.target.value)}
                   />
                 )}
               />

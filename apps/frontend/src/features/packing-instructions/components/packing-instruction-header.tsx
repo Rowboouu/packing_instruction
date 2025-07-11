@@ -16,7 +16,6 @@ export function PackingInstructionHeader({
   isLoading,
   dataSource,
 }: PackingInstructionHeaderProps) {
-  console.log('PackingInstructionHeader received assortment:', assortment);
   
   return (
     <PageHeader isLoading={isLoading}>

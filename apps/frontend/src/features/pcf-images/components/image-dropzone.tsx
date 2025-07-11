@@ -18,7 +18,7 @@ interface ImageDropZoneProps {
 
 export const ImageDropZone = forwardRef<HTMLDivElement, ImageDropZoneProps>(
   (
-    { assortmentId, label, name, value, groupPcfImages, onChange },
+    { assortmentId, label, name, value, groupPcfImages, onChange }, 
     ref: Ref<HTMLDivElement>,
   ) => {
     const { t } = useTranslation();

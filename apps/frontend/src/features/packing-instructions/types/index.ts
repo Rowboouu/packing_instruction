@@ -1,7 +1,62 @@
 // @/features/packing-instructions/types/index.ts
 
-import { AssortmentPCF } from '@/features/assortments';
+import { FileData } from '@/features/files';
 import { PcfImage } from '@/features/pcf-images';
+
+export interface Assortment {
+  _id: string;
+  orderItemId: number;
+  customerItemNo: string | null;
+  itemNo: string;
+  name: string;
+  orderId: number;
+  productId: number;
+  createdAt: string;
+  updatedAt: string;
+  status: 'pending' | 'todo' | 'ongoing' | 'completed' | 'approved';
+  uploadStatus: 'pending' | 'in-progress' | 'completed';
+  
+  // Dimensions from webhook
+  length_cm: number;
+  width_cm: number;
+  height_cm: number;
+  master_carton_length_cm: number;
+  master_carton_width_cm: number;
+  master_carton_height_cm: number;
+  inner_carton_length_cm: number;
+  inner_carton_width_cm: number;
+  inner_carton_height_cm: number;
+  
+  // Optional legacy image (might not be used with webhook data)
+  image?: FileData;
+  
+  // User-modifiable fields (can be updated via forms)
+  masterCUFT?: number;
+  masterGrossWeight?: number;
+  productInCarton?: number;
+  productPerUnit?: number;
+  
+  // Optional additional fields
+  labels?: Record<string, { id: number; value: string; name: string }>[];
+  itemInCarton?: number;
+  itemPerUnit?: number;
+  itemCUFT?: number;
+  itemGrossWeight?: number;
+  unit?: string;
+  cubicUnit?: string;
+  wtUnit?: string;
+}
+
+// PCF-specific interface with structured images
+export interface AssortmentPCF extends Assortment {
+  pcfImages: {
+    itemPackImages: PcfImage[][] | any[][]; // Support both user uploads and webhook structure
+    itemBarcodeImages: PcfImage[] | any[];
+    displayImages: PcfImage[] | any[];
+    innerCartonImages: PcfImage[] | any[];
+    masterCartonImages: PcfImage[] | any[];
+  };
+}
 
 // Webhook image structure from Odoo
 export interface WebhookImage {
@@ -59,42 +114,6 @@ export interface WebhookData {
     assortmentCount: number;
     source: string;
     odooVersion?: string;
-  };
-}
-
-// Sales Order data (transformed for UI)
-export interface SalesOrderData {
-  salesOrder: {
-    id: string;
-    orderNumber: string;
-    customer: string;
-    customerPO?: string;
-    status: string;
-    totalAssortments: number;
-    totalImages: number;
-    createdAt: string;
-    updatedAt: string;
-  };
-  assortments: Array<{
-    _id: string;
-    itemNo: string;
-    customerItemNo?: string;
-    name: string;
-    status: 'pending' | 'todo' | 'ongoing' | 'completed' | 'approved';
-    hasUserModifications: boolean;
-    lastModified?: Date;
-    uploadedImageCount: number;
-    webhookImageCount: number; // Images from Odoo webhook
-    dimensions: {
-      length_cm: number;
-      width_cm: number;
-      height_cm: number;
-    };
-  }>;
-  metadata: {
-    source: 'webhook' | 'traditional';
-    totalImages: number;
-    lastUpdated: Date;
   };
 }
 
@@ -193,6 +212,67 @@ export interface AssortmentData {
   };
 }
 
+// UPDATED: Sales Order data (now uses AssortmentData[])
+export interface SalesOrderData {
+  salesOrder: {
+    id: string;
+    orderNumber: string;
+    customer: string;
+    customerPO?: string;
+    status: string;
+    totalAssortments: number;
+    totalImages: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+  // FIXED: Changed from simplified objects to full AssortmentData[]
+  assortments: AssortmentData[];
+  metadata: {
+    source: 'webhook' | 'traditional';
+    totalImages: number;
+    lastUpdated: Date;
+  };
+}
+
+// DEPRECATED: Keep for backward compatibility if needed
+// Legacy sales order assortment structure (for components that still expect it)
+export interface LegacyAssortmentSummary {
+  _id: string;
+  itemNo: string;
+  customerItemNo?: string;
+  name: string;
+  status: 'pending' | 'todo' | 'ongoing' | 'completed' | 'approved';
+  hasUserModifications: boolean;
+  lastModified?: Date;
+  uploadedImageCount: number;
+  webhookImageCount: number; // Images from Odoo webhook
+  dimensions: {
+    length_cm: number;
+    width_cm: number;
+    height_cm: number;
+  };
+}
+
+// Helper type for components that need simplified assortment data
+export interface AssortmentSummary {
+  _id: string;
+  itemNo: string;
+  customerItemNo?: string;
+  name: string;
+  status: 'pending' | 'todo' | 'ongoing' | 'completed' | 'approved';
+  hasUserModifications: boolean;
+  lastModified?: Date;
+  uploadedImageCount: number;
+  webhookImageCount: number;
+  dimensions: {
+    length_cm: number;
+    width_cm: number;
+    height_cm: number;
+  };
+  // Optional: Include reference to full data
+  fullData?: AssortmentData;
+}
+
 // DTOs for API requests
 export interface UpdateAssortmentDTO {
   _id: string;
@@ -211,9 +291,6 @@ export interface UploadImagesDTO {
   imageLabels?: Record<string, string>;
   isWebhookData?: boolean; // Flag for different handling
 }
-
-// REMOVED: SaveIndividualAssortmentDTO and SaveIndividualAssortmentResponse
-// These are now only exported from ./api/saveIndividualAssortment
 
 // API Response types
 export interface WebhookDataResponse {
@@ -254,6 +331,27 @@ export interface PackingInstructionTableItem {
   pcfImages: WebhookPcfImages;
 }
 
+// Table row data type that matches what DataTable expects
+export interface AssortmentRowData {
+  _id: string;
+  itemNo: string;
+  name: string;
+  customerItemNo: string;
+  status: string;
+  imageCount: number;
+  webhookImageCount: number; // Required by the table
+  length_cm: number;
+  width_cm: number;
+  height_cm: number;
+  master_carton_length_cm: number;
+  master_carton_width_cm: number;
+  master_carton_height_cm: number;
+  inner_carton_length_cm: number;
+  inner_carton_width_cm: number;
+  inner_carton_height_cm: number;
+  pcfImages: WebhookPcfImages;
+}
+
 // Utility types for image counting
 export interface ImageCounts {
   itemPack: number;
@@ -274,3 +372,87 @@ export type PackingInstructionComponentProps<T = AssortmentData> = {
   isLoading?: boolean;
   dataSource?: DataSource;
 };
+
+// Enhanced metadata interface
+export interface EnhancedMetadata {
+  source: 'traditional' | 'webhook';
+  lastModified: Date;
+  version: number;
+  syncedAt: Date;
+  modifiedBy?: string;
+  isWebhookData?: boolean;
+  dataSource?: 'navigation' | 'api';
+  // Optional fields for backward compatibility
+  persistentStorageEnabled?: boolean;
+  cacheKey?: string;
+  imageCollectionHash?: string;
+  performanceMetrics?: {
+    averageLoadTime?: number;
+    cacheHitRate?: number;
+    totalCacheHits?: number;
+    totalCacheMisses?: number;
+    lastPerformanceCheck?: Date;
+  };
+}
+
+// Enhanced base assortment interface
+export interface EnhancedBaseAssortment {
+  _id: string;
+  itemNo: string;
+  customerItemNo?: string;
+  name: string;
+  orderId?: number;
+  productId?: number;
+  status: string;
+  length_cm: number;
+  width_cm: number;
+  height_cm: number;
+  master_carton_length_cm: number;
+  master_carton_width_cm: number;
+  master_carton_height_cm: number;
+  inner_carton_length_cm: number;
+  inner_carton_width_cm: number;
+  inner_carton_height_cm: number;
+  webhookImages?: any;
+  sourceOrderName?: string;
+  salesOrder?: any;
+}
+
+// Enhanced query config
+export interface EnhancedQueryConfig<T> {
+  enabled?: boolean;
+  retry?: boolean | number | ((failureCount: number, error: any) => boolean);
+  retryDelay?: number | ((attemptIndex: number) => number);
+  staleTime?: number;
+  gcTime?: number;
+  refetchOnWindowFocus?: boolean;
+  refetchOnReconnect?: boolean;
+  refetchInterval?: number | false;
+  initialData?: T;
+  onSuccess?: (data: T) => void;
+  onError?: (error: any) => void;
+}
+
+// Cache statistics interface
+export interface CacheStatistics {
+  totalQueries: number;
+  assortmentQueries: number;
+  staleQueries: number;
+  cachedAssortments: string[];
+}
+
+// Smart hook return type
+export interface SmartHookResult<T> {
+  data: T | undefined;
+  isLoading: boolean;
+  error: any;
+  dataSource: 'webhook-cached' | 'traditional' | 'navigation-fallback';
+  cacheStats?: CacheStatistics;
+  isSuccess: boolean;
+  isError: boolean;
+}
+
+export interface BatchDeleteImagesDTO {
+  assortmentId: string;
+  imageIds: string[]; // An array of filenames to be deleted
+}

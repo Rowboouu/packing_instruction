@@ -1,9 +1,8 @@
 // src/schemas/individual-assortment.schema.ts
-
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-// Self-contained schema for individual assortments (no dependency on webhook-data.schema)
+// Enhanced image schema with hashing and versioning
 @Schema({ _id: false })
 export class IndividualAssortmentImage {
   @Prop({ required: true })
@@ -17,6 +16,20 @@ export class IndividualAssortmentImage {
 
   @Prop({ required: true })
   filename: string;
+
+  // NEW: Add image hash for change detection
+  @Prop({ required: true })
+  imageHash: string; // SHA-256 hash of base64 content
+
+  // NEW: Add image metadata
+  @Prop()
+  imageSize?: number; // Size in bytes for optimization
+
+  @Prop()
+  imageMimeType?: string; // Detected MIME type
+
+  @Prop({ default: Date.now })
+  lastUpdated: Date;
 }
 
 const IndividualAssortmentImageSchema = SchemaFactory.createForClass(IndividualAssortmentImage);
@@ -37,9 +50,93 @@ export class IndividualAssortmentPcfImages {
 
   @Prop({ type: [IndividualAssortmentImageSchema], default: [] })
   masterCartonImages: IndividualAssortmentImage[];
+
+  // NEW: Add overall image collection metadata
+  @Prop()
+  totalImageCount?: number;
+
+  @Prop()
+  lastImageUpdate?: Date;
+
+  @Prop()
+  imageCollectionHash?: string; // Hash of all image hashes combined
 }
 
 const IndividualAssortmentPcfImagesSchema = SchemaFactory.createForClass(IndividualAssortmentPcfImages);
+
+// NEW: User uploaded file schema
+@Schema({ _id: false })
+export class UserUploadedFile {
+  @Prop({ required: true })
+  originalname: string;
+
+  @Prop({ required: true })
+  filename: string;
+
+  @Prop({ required: true })
+  mimetype: string;
+
+  @Prop({ required: true })
+  size: number;
+
+  @Prop({ required: true })
+  uploadedAt: string;
+
+  @Prop()
+  buffer?: Buffer; // Store file data if needed
+}
+
+const UserUploadedFileSchema = SchemaFactory.createForClass(UserUploadedFile);
+
+// NEW: User uploaded images by category
+@Schema({ _id: false })
+export class UserUploadedImages {
+  @Prop({ type: [UserUploadedFileSchema], default: [] })
+  itemPackImages: UserUploadedFile[];
+
+  @Prop({ type: [UserUploadedFileSchema], default: [] })
+  itemBarcodeImages: UserUploadedFile[];
+
+  @Prop({ type: [UserUploadedFileSchema], default: [] })
+  displayImages: UserUploadedFile[];
+
+  @Prop({ type: [UserUploadedFileSchema], default: [] })
+  innerCartonImages: UserUploadedFile[];
+
+  @Prop({ type: [UserUploadedFileSchema], default: [] })
+  masterCartonImages: UserUploadedFile[];
+}
+
+const UserUploadedImagesSchema = SchemaFactory.createForClass(UserUploadedImages);
+
+// NEW: User modifications schema
+@Schema({ _id: false })
+export class UserModifications {
+  @Prop({ type: UserUploadedImagesSchema })
+  uploadedImages?: UserUploadedImages;
+
+  @Prop({ type: Object, default: {} })
+  imageLabels: Record<string, string>;
+
+  @Prop()
+  lastModified?: Date;
+
+  @Prop({ type: Object, default: {} })
+  customFields?: Record<string, any>;
+
+  @Prop({ type: Object })
+  formData?: {
+    productInCarton?: number;
+    productPerUnit?: number;
+    masterCUFT?: number;
+    masterGrossWeight?: number;
+    unit?: string;
+    cubicUnit?: string;
+    wtUnit?: string;
+  };
+}
+
+const UserModificationsSchema = SchemaFactory.createForClass(UserModifications);
 
 @Schema({ _id: false })
 export class IndividualAssortmentData {
@@ -90,16 +187,41 @@ export class IndividualAssortmentData {
 
   @Prop({ type: IndividualAssortmentPcfImagesSchema, required: true })
   pcfImages: IndividualAssortmentPcfImages;
+
+  // NEW: Add user modifications field
+  @Prop({ type: UserModificationsSchema })
+  userModifications?: UserModifications;
 }
 
 const IndividualAssortmentDataSchema = SchemaFactory.createForClass(IndividualAssortmentData);
+
+// NEW: Image version history for tracking changes
+@Schema({ _id: false })
+export class ImageVersionHistory {
+  @Prop({ required: true })
+  version: number;
+
+  @Prop({ required: true })
+  imageCollectionHash: string;
+
+  @Prop({ required: true })
+  receivedAt: Date;
+
+  @Prop()
+  changedImages?: string[]; // Array of componentNames that changed
+
+  @Prop()
+  totalImages?: number;
+}
+
+const ImageVersionHistorySchema = SchemaFactory.createForClass(ImageVersionHistory);
 
 @Schema({ 
   timestamps: true,
   collection: 'individual_assortments' 
 })
 export class IndividualAssortment extends Document {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true, unique: true, index: true })
   assortmentId: string; // The itemNo (e.g., "A000404")
 
   @Prop({ type: IndividualAssortmentDataSchema, required: true })
@@ -126,18 +248,54 @@ export class IndividualAssortment extends Document {
   @Prop()
   lastAccessedAt: Date;
 
+  // NEW: Version management
+  @Prop({ default: 1 })
+  currentVersion: number;
+
+  @Prop({ type: [ImageVersionHistorySchema], default: [] })
+  versionHistory: ImageVersionHistory[];
+
+  // NEW: Cache management
+  @Prop()
+  cacheKey?: string; // For React Query cache invalidation
+
+  @Prop({ default: Date.now })
+  lastCacheUpdate: Date;
+
+  // NEW: Enhanced metadata
   @Prop({ type: Object })
   metadata: {
     totalImages?: number;
     source?: 'individual_webhook' | 'sales_order_extraction';
     odooVersion?: string;
     originalId?: number;
+    // NEW: Add more metadata
+    imageCollectionHash?: string;
+    lastImageUpdate?: Date;
+    persistentStorageEnabled?: boolean;
+    cachingStrategy?: 'aggressive' | 'conservative' | 'minimal';
+    hasUserModifications?: boolean; // NEW: Track if user has made changes
+  };
+
+  // NEW: Performance tracking
+  @Prop({ type: Object })
+  performanceMetrics?: {
+    averageLoadTime?: number;
+    cacheHitRate?: number;
+    lastPerformanceCheck?: Date;
+    totalCacheHits?: number;
+    totalCacheMisses?: number;
   };
 }
 
 export const IndividualAssortmentSchema = SchemaFactory.createForClass(IndividualAssortment);
 
-// Add indexes for better query performance
+// Enhanced indexes for better query performance
 IndividualAssortmentSchema.index({ assortmentId: 1 });
 IndividualAssortmentSchema.index({ status: 1 });
 IndividualAssortmentSchema.index({ receivedAt: -1 });
+IndividualAssortmentSchema.index({ currentVersion: 1 });
+IndividualAssortmentSchema.index({ 'metadata.imageCollectionHash': 1 });
+IndividualAssortmentSchema.index({ lastCacheUpdate: -1 });
+IndividualAssortmentSchema.index({ cacheKey: 1 });
+IndividualAssortmentSchema.index({ 'metadata.hasUserModifications': 1 }); // NEW: Index for user modifications

@@ -24,7 +24,6 @@ export type UploadAssortmentImageDTO = z.infer<
 
 export async function uploadImages({
   _id,
-  ...data
 }: {
   _id: string;
 } & UploadImageDTO) {

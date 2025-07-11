@@ -9,7 +9,7 @@ import { Icons } from '@/components/icons';
 import { PackingInstructionCard } from './packing-instruction-card';
 import { packingInstructionTableColumns } from './packing-instruction-table-columns';
 import { PackingInstructionTablePagination } from './packing-instruction-table-pagination';
-import { SalesOrderData } from '../types';
+import { SalesOrderData, AssortmentData, AssortmentRowData } from '../types';
 
 interface PackingInstructionDataViewProps {
   salesOrderData: SalesOrderData;
@@ -26,15 +26,22 @@ export function PackingInstructionDataView({
   // Local state for search filtering
   const [searchTerm, setSearchTerm] = React.useState('');
 
-  // Filter assortments based on search term
+  // Filter assortments based on search term - FIXED to handle AssortmentData structure
   const filteredAssortments = React.useMemo(() => {
     if (!salesOrderData?.assortments) return [];
 
-    return salesOrderData.assortments.filter(assortment =>
-      assortment.itemNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assortment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (assortment.customerItemNo || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return salesOrderData.assortments.filter((assortment: AssortmentData) => {
+      // Safely access properties from the AssortmentData structure
+      const itemNo = assortment.baseAssortment?.itemNo || assortment.mergedData?.assortment?.itemNo || '';
+      const name = assortment.baseAssortment?.name || assortment.mergedData?.assortment?.name || '';
+      const customerItemNo = assortment.baseAssortment?.customerItemNo || assortment.mergedData?.assortment?.customerItemNo || '';
+      
+      const searchLower = searchTerm.toLowerCase();
+      
+      return itemNo.toLowerCase().includes(searchLower) ||
+             name.toLowerCase().includes(searchLower) ||
+             customerItemNo.toLowerCase().includes(searchLower);
+    });
   }, [salesOrderData?.assortments, searchTerm]);
 
   // Pagination logic
@@ -52,15 +59,38 @@ export function PackingInstructionDataView({
     hasPreviousPage: currentPage > 1,
   };
 
-  // Transform assortments for table display
-  const tableData = paginatedAssortments.map(assortment => ({
-    ...assortment,
-    imageCount: assortment.webhookImageCount, // Use the correct property
-    status: assortment.status,
-    length_cm: assortment.dimensions.length_cm,
-    width_cm: assortment.dimensions.width_cm,
-    height_cm: assortment.dimensions.height_cm,
-  }));
+  // Transform assortments for table display - FIXED to handle AssortmentData structure
+  const tableData: AssortmentRowData[] = paginatedAssortments.map((assortment: AssortmentData) => {
+    const baseAssortment = assortment.baseAssortment || {};
+    const mergedAssortment = assortment.mergedData?.assortment || {};
+    
+    return {
+      _id: baseAssortment._id || mergedAssortment._id || '',
+      itemNo: baseAssortment.itemNo || mergedAssortment.itemNo || '',
+      name: baseAssortment.name || mergedAssortment.name || '',
+      customerItemNo: baseAssortment.customerItemNo || mergedAssortment.customerItemNo || '',
+      status: baseAssortment.status || mergedAssortment.status || 'pending',
+      imageCount: assortment.mergedData?.combinedImageCount || 0,
+      webhookImageCount: assortment.mergedData?.combinedImageCount || 0, // Required by table type
+      length_cm: baseAssortment.length_cm || mergedAssortment.length_cm || 0,
+      width_cm: baseAssortment.width_cm || mergedAssortment.width_cm || 0,
+      height_cm: baseAssortment.height_cm || mergedAssortment.height_cm || 0,
+      master_carton_length_cm: baseAssortment.master_carton_length_cm || mergedAssortment.master_carton_length_cm || 0,
+      master_carton_width_cm: baseAssortment.master_carton_width_cm || mergedAssortment.master_carton_width_cm || 0,
+      master_carton_height_cm: baseAssortment.master_carton_height_cm || mergedAssortment.master_carton_height_cm || 0,
+      inner_carton_length_cm: baseAssortment.inner_carton_length_cm || mergedAssortment.inner_carton_length_cm || 0,
+      inner_carton_width_cm: baseAssortment.inner_carton_width_cm || mergedAssortment.inner_carton_width_cm || 0,
+      inner_carton_height_cm: baseAssortment.inner_carton_height_cm || mergedAssortment.inner_carton_height_cm || 0,
+      // Include the webhook images
+      pcfImages: baseAssortment.webhookImages || mergedAssortment.pcfImages || {
+        itemPackImages: [],
+        itemBarcodeImages: [],
+        displayImages: [],
+        innerCartonImages: [],
+        masterCartonImages: [],
+      },
+    };
+  });
 
   return (
     <div className="w-auto">
@@ -130,8 +160,9 @@ export function PackingInstructionDataView({
   );
 }
 
-interface PackingInstructionGridProps {
-  items: SalesOrderData['assortments'];
+// Grid/List view item types for data table
+export interface PackingInstructionGridProps {
+  items: AssortmentData[]; // FIXED: Updated type to AssortmentData[]
   salesOrderId: string;
   currentPage: number;
   itemsPerPage: number;
@@ -143,6 +174,36 @@ interface PackingInstructionGridProps {
   searchParams: {
     params: any;
     setParams: (newParams: any) => void;
+  };
+}
+
+// Helper function to transform AssortmentData to PackingInstructionCard format
+function transformAssortmentDataForCard(assortmentData: AssortmentData) {
+  const baseAssortment = assortmentData.baseAssortment || {};
+  const mergedAssortment = assortmentData.mergedData?.assortment || {};
+  const webhookImages = assortmentData.baseAssortment?.webhookImages || assortmentData.mergedData?.webhookImages;
+  
+  return {
+    _id: baseAssortment._id || mergedAssortment._id || '',
+    customerItemNo: baseAssortment.customerItemNo || '',
+    itemNo: baseAssortment.itemNo || mergedAssortment.itemNo || '',
+    name: baseAssortment.name || mergedAssortment.name || '',
+    status: baseAssortment.status || mergedAssortment.status || 'pending',
+    image: undefined, // We'll extract this from webhookImages if available
+    webhookImageCount: assortmentData.mergedData?.combinedImageCount || 0,
+    dimensions: {
+      length_cm: baseAssortment.length_cm || mergedAssortment.length_cm || 0,
+      width_cm: baseAssortment.width_cm || mergedAssortment.width_cm || 0,
+      height_cm: baseAssortment.height_cm || mergedAssortment.height_cm || 0,
+    },
+    webhookImages: webhookImages || {
+      itemPackImages: [],
+      itemBarcodeImages: [],
+      displayImages: [],
+      innerCartonImages: [],
+      masterCartonImages: [],
+    },
+    pcfImages: mergedAssortment.pcfImages || webhookImages,
   };
 }
 
@@ -163,8 +224,8 @@ function PackingInstructionGridView({
       <div className="mx-n4 px-4 mx-lg-n6 px-lg-6 position-relative top-1 products-grid-container pb-5">
         {paginatedItems.map((item) => (
           <PackingInstructionCard
-            key={item._id}
-            assortment={item}
+            key={item.baseAssortment?._id || item.mergedData?.assortment?._id}
+            assortment={transformAssortmentDataForCard(item)}
             salesOrderId={salesOrderId}
           />
         ))}

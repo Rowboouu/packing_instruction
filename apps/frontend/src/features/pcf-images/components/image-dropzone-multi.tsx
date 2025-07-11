@@ -26,7 +26,7 @@ export const ImageDropZoneMulti = forwardRef<
     ref: Ref<HTMLDivElement>,
   ) => {
     const { t } = useTranslation();
-    const [items, setItems] = React.useState<(File | PcfImage)[]>(value || []);
+    const [items, setItems] = React.useState<(File | PcfImage)[]>(value || []); 
 
     const pcfImages = name
       ? groupPcfImages?.[name as keyof typeof groupPcfImages]

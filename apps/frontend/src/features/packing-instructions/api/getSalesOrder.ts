@@ -1,9 +1,14 @@
+// @/features/packing-instructions/api/getSalesOrder.ts
+// Updated to use shared transformers
+
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/axios-client';
 import { QUERY_KEYS } from '@/constant/query-key';
 import { QueryConfig } from '@/lib/react-query';
 import { SalesOrderData } from '../types';
+import { transformWebhookToSalesOrderData } from '../utils/transformers';
 
+// Traditional sales order API
 export async function getSalesOrder(
   salesOrderId: string,
 ): Promise<SalesOrderData> {
@@ -13,7 +18,7 @@ export async function getSalesOrder(
   return res.data;
 }
 
-// NEW: Get sales order from webhook system
+// Webhook sales order API with shared transformers
 export async function getWebhookSalesOrder(salesOrderId: string): Promise<SalesOrderData> {
   const res = await api.get<{
     success: boolean;
@@ -27,6 +32,7 @@ export async function getWebhookSalesOrder(salesOrderId: string): Promise<SalesO
       assortments: Array<any>;
       status: string;
       receivedAt: string;
+      processedAt?: string;
       metadata?: {
         totalImages: number;
         assortmentCount: number;
@@ -41,66 +47,15 @@ export async function getWebhookSalesOrder(salesOrderId: string): Promise<SalesO
     throw new Error(res.data.message || `Sales order ${salesOrderId} not found`);
   }
   
-  // Transform webhook data to SalesOrderData format
+  // Use shared transformer - this ensures consistent AssortmentData structure
   return transformWebhookToSalesOrderData(res.data.data);
-}
-
-function transformWebhookToSalesOrderData(webhookData: any): SalesOrderData {
-  return {
-    salesOrder: {
-      id: webhookData.salesOrder.id,
-      orderNumber: webhookData.salesOrder.id,
-      customer: webhookData.salesOrder.customer,
-      customerPO: webhookData.salesOrder.customer_po,
-      status: webhookData.status || 'active',
-      totalAssortments: webhookData.assortments?.length || 0,
-      totalImages: webhookData.metadata?.totalImages || 0,
-      createdAt: webhookData.receivedAt,
-      updatedAt: webhookData.processedAt || webhookData.receivedAt,
-    },
-    assortments: webhookData.assortments?.map((assortment: any) => ({
-      _id: assortment._id?.toString() || assortment.itemNo,
-      itemNo: assortment.itemNo,
-      customerItemNo: assortment.customerItemNo,
-      name: assortment.name,
-      status: 'pending' as const, // Fix: Add 'as const' for proper typing
-      hasUserModifications: false, // Fix: Add missing property
-      uploadedImageCount: 0, // Fix: Add missing property
-      webhookImageCount: countAssortmentImages(assortment), // Fix: Use correct property name
-      dimensions: {
-        length_cm: assortment.length_cm || 0,
-        width_cm: assortment.width_cm || 0,
-        height_cm: assortment.height_cm || 0,
-      },
-    })) || [],
-    metadata: {
-      source: 'webhook' as const, // Fix: Add 'as const' for proper typing
-      totalImages: webhookData.metadata?.totalImages || 0,
-      lastUpdated: new Date(),
-    },
-  };
-}
-
-function countAssortmentImages(assortment: any): number {
-  const pcfImages = assortment.pcfImages;
-  if (!pcfImages) return 0;
-
-  const itemPackCount = pcfImages.itemPackImages?.reduce(
-    (acc: number, pack: any[]) => acc + pack.length, 0
-  ) || 0;
-  
-  const otherImagesCount = (pcfImages.itemBarcodeImages?.length || 0) +
-                           (pcfImages.displayImages?.length || 0) +
-                           (pcfImages.innerCartonImages?.length || 0) +
-                           (pcfImages.masterCartonImages?.length || 0);
-
-  return itemPackCount + otherImagesCount;
 }
 
 type QueryFnType = typeof getSalesOrder;
 type WebhookQueryFnType = typeof getWebhookSalesOrder;
 type ParamType = Parameters<typeof getSalesOrder>[0];
 
+// Query configurations
 export const getSalesOrderQuery = (salesOrderId: ParamType) => ({
   queryKey: [QUERY_KEYS.PACKING_INSTRUCTION, 'sales-order', salesOrderId],
   queryFn: () => getSalesOrder(salesOrderId),
@@ -111,7 +66,7 @@ export const getWebhookSalesOrderQuery = (salesOrderId: ParamType) => ({
   queryFn: () => getWebhookSalesOrder(salesOrderId),
 });
 
-// Updated hook to use traditional API
+// Traditional sales order hook
 export function useGetSalesOrder(
   salesOrderId: string,
   options?: QueryConfig<QueryFnType>,
@@ -123,7 +78,7 @@ export function useGetSalesOrder(
   });
 }
 
-// NEW: Hook to use webhook API
+// Webhook sales order hook
 export function useGetWebhookSalesOrder(
   salesOrderId: string,
   options?: QueryConfig<WebhookQueryFnType>,
@@ -131,11 +86,21 @@ export function useGetWebhookSalesOrder(
   return useQuery({
     ...getWebhookSalesOrderQuery(salesOrderId),
     enabled: !!salesOrderId && salesOrderId.startsWith('SOP'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 24 * 60 * 60 * 1000, // 24 hours
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 404) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     ...options,
   });
 }
 
-// NEW: Smart hook that tries webhook first, falls back to traditional
+// Smart hook that tries webhook first, falls back to traditional
 export function useGetSalesOrderSmart(
   salesOrderId: string,
   preferWebhook: boolean = true,

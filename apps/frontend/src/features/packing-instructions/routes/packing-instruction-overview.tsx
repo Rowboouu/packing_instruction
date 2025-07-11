@@ -84,7 +84,7 @@ function SalesOrderPackingInstructionList({ salesOrderId }: { salesOrderId: stri
     );
   }
 
-  const { salesOrder, metadata } = salesOrderData;
+  const { salesOrder } = salesOrderData;
   const pageTitle = `${salesOrder.orderNumber} - ${salesOrder.customer}`;
 
   return (
@@ -93,7 +93,7 @@ function SalesOrderPackingInstructionList({ salesOrderId }: { salesOrderId: stri
         isLoading={salesOrderLoading}
         breadcrumbs={[
           {
-            to: `/packing-instruction`,
+            to: `/packing-instruction/${salesOrder.orderNumber}`,
             label: t('keyNavigation_packingInstructions') || 'Packing Instructions',
           },
           {
@@ -107,7 +107,7 @@ function SalesOrderPackingInstructionList({ salesOrderId }: { salesOrderId: stri
       <PageHeader>{pageTitle}</PageHeader>
 
       {/* Sales Order Info Card */}
-      <div className="bg-white rounded-lg shadow-sm border p-4 mb-4">
+      {/* <div className="bg-white rounded-lg shadow-sm border p-4 mb-4">
         <div className="grid grid-cols-3 gap-4 text-sm">
           <div>
             <span className="font-medium text-gray-700">Sales Order:</span>
@@ -128,10 +128,6 @@ function SalesOrderPackingInstructionList({ salesOrderId }: { salesOrderId: stri
             </div>
           )}
           <div>
-            <span className="font-medium text-gray-700">Total Images:</span>
-            <span className="ml-2 text-gray-900">{salesOrder.totalImages}</span>
-          </div>
-          <div>
             <span className="font-medium text-gray-700">Status:</span>
             <span className={`ml-2 font-medium ${
               salesOrder.status === 'active' ? 'text-green-600' : 'text-yellow-600'
@@ -139,9 +135,8 @@ function SalesOrderPackingInstructionList({ salesOrderId }: { salesOrderId: stri
               {salesOrder.status.charAt(0).toUpperCase() + salesOrder.status.slice(1)}
             </span>
           </div>
-          {/* Development info */}
           {process.env.NODE_ENV === 'development' && (
-            <div className="col-span-3">
+            <div className="col-span-1">
               <span className="font-medium text-gray-700">Data Source:</span>
               <span className="ml-2 text-blue-600 text-xs">
                 📡 Webhook API ({metadata.source})
@@ -149,7 +144,7 @@ function SalesOrderPackingInstructionList({ salesOrderId }: { salesOrderId: stri
             </div>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* Pass the SalesOrderData directly - no transformation needed! */}
       <PackingInstructionDataView 
@@ -162,24 +157,9 @@ function SalesOrderPackingInstructionList({ salesOrderId }: { salesOrderId: stri
 
 // Component for individual assortment view
 function IndividualAssortmentView({ assortmentId }: { assortmentId: string }) {
-  const { t } = useTranslation();
 
   return (
     <>
-      <Breadcrumbs
-        breadcrumbs={[
-          {
-            to: `/packing-instruction`,
-            label: t('keyNavigation_packingInstructions') || 'Packing Instructions',
-          },
-          {
-            to: '#',
-            label: assortmentId,
-            active: true,
-          },
-        ]}
-      />
-
       {/* Use the new PackingInstructionView component */}
       <PackingInstructionView assortmentId={assortmentId} />
     </>

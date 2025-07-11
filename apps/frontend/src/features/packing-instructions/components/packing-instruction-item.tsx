@@ -10,9 +10,6 @@ interface PackingInstructionItemProps {
 export function PackingInstructionItem({ assortment }: PackingInstructionItemProps) {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-
-  console.log('PackingInstructionItem received assortment:', assortment);
-
   const defaultValue = searchParams.get('tab_view') || 'images';
 
   function handleOnViewChange(value: string) {
@@ -25,7 +22,6 @@ export function PackingInstructionItem({ assortment }: PackingInstructionItemPro
     return (
       <div className="text-center py-8">
         <p className="text-gray-600">Assortment data is not properly loaded</p>
-        <p className="text-sm text-gray-500">Check console for detailed logs</p>
       </div>
     );
   }

@@ -4,10 +4,10 @@ import { Card, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import useDropzoneHandler from '@/hooks/useDropzoneHandler';
-import { groupPCFImages } from '@/utils/pcf-util';
 import { useTranslation } from 'react-i18next';
 import { PCFImageItem } from './pcf-image-item';
 import { PcfImage } from '..';
+import { isOdooImage } from '../routes/pcf-images-page';
 
 interface GridImageItem {
   id: string;
@@ -17,26 +17,32 @@ interface GridImageItem {
   isUploadSlot?: boolean;
   isRequired?: boolean;
   placeholder?: string;
+  base64Data?: string;
+  // Staging flags
+  isMarkedForDeletion?: boolean;
+  replacementFile?: File;
 }
 
 interface GridImageSectionProps {
   assortmentId?: string;
   items: GridImageItem[];
   onItemsChange: (items: GridImageItem[]) => void;
-  groupPcfImages?: ReturnType<typeof groupPCFImages>;
+  sectionType?: string;
+  onStageForDelete?: (filename: string) => void;
+  onStageForReplace?: (filename: string, newFile: File) => void;
   requiredInputs?: {
     label: string;
     value: string;
     onChange: (value: string) => void;
     placeholder?: string;
   }[];
-  jsonData?: any; // This will be the JSON input data
-  sectionId?: string; // For cross-section transfers
+  jsonData?: any;
+  sectionId?: string;
   onCrossSectionTransfer?: (
     fromSectionId: string,
     toSectionId: string,
     item: GridImageItem,
-    targetIndex: number,
+    targetIndex: number
   ) => void;
   acceptCrossSectionTransfers?: boolean;
 }
@@ -94,7 +100,8 @@ interface GridImageCardProps {
   assortmentId?: string;
   onFileChange: (file?: File) => void;
   onLabelChange: (label: string) => void;
-  onDelete?: () => void;
+  onStageForDelete?: (filename: string) => void;
+  onStageForReplace?: (filename: string, newFile: File) => void;
   index: number;
   onDragStart: (index: number, item: GridImageItem) => void;
   onDragOver: (index: number) => void;
@@ -110,7 +117,8 @@ function GridImageCard({
   assortmentId,
   onFileChange,
   onLabelChange,
-  onDelete,
+  onStageForDelete,
+  onStageForReplace,
   index,
   onDragStart,
   onDragOver,
@@ -121,20 +129,15 @@ function GridImageCard({
   sectionId,
 }: GridImageCardProps) {
   const { t } = useTranslation();
-  const displayItem = item.file || item.pcfImage;
 
-  const { getRootProps, getInputProps, open } = useDropzoneHandler({
+  const isFromOdoo = isOdooImage(item);
+
+  const displayItem = item.replacementFile || item.file || item.pcfImage;
+
+  const { getRootProps, getInputProps } = useDropzoneHandler({
     selectedFiles: (files) => onFileChange(files[0]),
     options: { multiple: false },
   });
-
-  const handleDelete = () => {
-    if (item.file) {
-      onFileChange(undefined);
-    } else if (onDelete) {
-      onDelete();
-    }
-  };
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -144,7 +147,7 @@ function GridImageCard({
         item,
         sourceIndex: index,
         sourceSectionId: sectionId,
-      }),
+      })
     );
     onDragStart(index, item);
   };
@@ -152,41 +155,45 @@ function GridImageCard({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-
-    // Get the current mouse position relative to the card
     const rect = e.currentTarget.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const mouseX = e.clientX;
-
-    // Determine if we should insert before or after based on mouse position
     const insertAfter = mouseX > centerX;
     const targetIndex = insertAfter ? index + 1 : index;
-
     onDragOver(targetIndex);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-
-    // Get the current mouse position relative to the card
     const rect = e.currentTarget.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const mouseX = e.clientX;
-
-    // Determine if we should insert before or after based on mouse position
     const insertAfter = mouseX > centerX;
     const targetIndex = insertAfter ? index + 1 : index;
-
     onDrop(e, targetIndex);
     onDragEnd();
+  };
+
+  // Enhanced replace handler
+  const handleReplaceFile = (newFile: File) => {
+    if (item.pcfImage?.filename && onStageForReplace) {
+      onStageForReplace(item.pcfImage.filename, newFile);
+    } else {
+      // For new files, just replace directly
+      onFileChange(newFile);
+    }
   };
 
   if (item.isUploadSlot && !displayItem) {
     return (
       <Card
         style={{ height: '200px', width: '220px' }}
-        className={`border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer transition-all duration-200 ${
-          isDragging ? 'opacity-50 scale-95' : 'opacity-100 hover:scale-105'
+        className={`border-2 border-dashed transition-all duration-200 hover:scale-105 ${
+          item.isRequired 
+            ? 'border-red-300 hover:border-red-400 bg-red-50 hover:bg-red-100' 
+            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+        } cursor-pointer ${
+          isDragging ? 'opacity-50 scale-95' : 'opacity-100'
         } ${isDragOver ? 'border-blue-400 bg-blue-50' : ''}`}
         draggable
         onDragStart={handleDragStart}
@@ -196,8 +203,15 @@ function GridImageCard({
       >
         <input {...getInputProps()} />
         <div className="h-full w-full flex flex-col justify-center items-center">
-          <Icons.Plus height={24} width={24} className="text-gray-400 mb-2" />
-          <span className="text-sm text-gray-500 text-center px-2">
+          {/* ✅ REQUIRED ICON: Different icon for required fields */}
+          {item.isRequired ? (
+            <Icons.Plus height={24} width={24} className="text-red-500 mb-2" />
+          ) : (
+            <Icons.Plus height={24} width={24} className="text-gray-400 mb-2" />
+          )}
+          <span className={`text-sm text-center px-2 ${
+            item.isRequired ? 'text-red-600 font-medium' : 'text-gray-500'
+          }`}>
             {item.placeholder || t('keyText_newImage')}
           </span>
         </div>
@@ -210,7 +224,9 @@ function GridImageCard({
       style={{ height: '200px', width: '220px' }}
       className={`flex flex-col overflow-hidden transition-all duration-200 hover:shadow-lg ${
         isDragging ? 'opacity-50 scale-95' : 'opacity-100 hover:scale-105'
-      } ${isDragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}`}
+      } ${isDragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-200'}
+      ${item.isMarkedForDeletion ? 'border-red-500 bg-red-50' : ''}
+      ${item.replacementFile ? 'border-orange-500 bg-orange-50' : ''}`}
       draggable
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
@@ -218,13 +234,67 @@ function GridImageCard({
     >
       {displayItem ? (
         <div className="flex-1 relative overflow-hidden flex items-center justify-center">
-          <PCFImageItem
-            item={displayItem}
-            label={item.label}
-            assortmentId={assortmentId}
-            onOpenClick={open}
-            onDeleteClick={handleDelete}
-          />
+          {/* Staging overlays */}
+          {item.isMarkedForDeletion && (
+            <div className="absolute inset-0 bg-red-500 bg-opacity-20 flex items-center justify-center z-10">
+              <div className="bg-red-600 text-white px-2 py-1 rounded text-xs font-medium">
+                MARKED FOR DELETION
+              </div>
+            </div>
+          )}
+          {item.replacementFile && (
+            <div className="absolute inset-0 bg-orange-500/30 flex items-center justify-center z-10">
+              <div className="bg-orange-600 text-white px-2 py-1 rounded text-xs font-medium">
+                REPLACEMENT STAGED
+              </div>
+            </div>
+          )}
+          
+          {/* ✅ FIXED: Render replacement file preview or original */}
+          {item.replacementFile ? (
+            // Show preview of replacement file
+            <img
+              src={URL.createObjectURL(item.replacementFile)}
+              alt={`Replacement for ${item.label}`}
+              style={{
+                maxWidth: '100%',
+                height: 'auto',
+                maxHeight: '160px',
+                display: 'block',
+                margin: 'auto',
+                objectFit: 'contain',
+              }}
+              onError={(e) => {
+                console.error('🚨 Replacement image preview failed to load');
+                const target = e.target as HTMLImageElement;
+                target.style.backgroundColor = '#f3f4f6';
+                target.style.border = '2px dashed #d1d5db';
+                target.alt = 'Replacement preview failed';
+              }}
+            />
+          ) : (
+            // Show original PCFImageItem
+            <PCFImageItem
+              item={displayItem}
+              label={item.label}
+              assortmentId={assortmentId}
+              onOpenClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) {
+                    handleReplaceFile(file);
+                  }
+                };
+                input.click();
+              }}
+              onStageForDelete={onStageForDelete}
+              base64Data={item.base64Data}
+              hideOptions={isFromOdoo}
+            />
+          )}
         </div>
       ) : (
         <div
@@ -245,6 +315,9 @@ function GridImageCard({
           onChange={onLabelChange}
           className="w-full"
         />
+        {item.isRequired && (
+          <span className="text-red-500 font-bold ml-1 text-sm">*</span>
+        )}
       </CardFooter>
     </Card>
   );
@@ -254,6 +327,8 @@ export function GridImageSection({
   assortmentId,
   items,
   onItemsChange,
+  onStageForDelete,
+  onStageForReplace,
   requiredInputs = [],
   jsonData,
   sectionId,
@@ -302,8 +377,7 @@ export function GridImageSection({
     try {
       const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
       const { item: droppedItem, sourceSectionId } = dragData;
-
-      // Cross-section transfer
+      
       if (
         sourceSectionId &&
         sourceSectionId !== sectionId &&
@@ -314,26 +388,18 @@ export function GridImageSection({
           sourceSectionId,
           sectionId!,
           droppedItem,
-          targetIndex,
+          targetIndex
         );
         return;
       }
-
-      // Same section reordering
+      
       if (draggedIndex !== null && draggedIndex !== targetIndex) {
         const newItems = [...items];
         const draggedItem = newItems[draggedIndex];
-
-        // Remove the dragged item
         newItems.splice(draggedIndex, 1);
-
-        // Adjust target index if dragging from earlier position
         const insertIndex =
           draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
-
-        // Insert at new position
         newItems.splice(insertIndex, 0, draggedItem);
-
         onItemsChange(newItems);
       }
     } catch (error) {
@@ -346,7 +412,6 @@ export function GridImageSection({
     setDragOverIndex(null);
   };
 
-  // Dropzone handler for the "Add New Image" button
   const { getRootProps: getAddRootProps, getInputProps: getAddInputProps } =
     useDropzoneHandler({
       selectedFiles: handleAddNewSlot,
@@ -355,7 +420,6 @@ export function GridImageSection({
 
   return (
     <div className="pt-2">
-      {/* Required Inputs Section */}
       {requiredInputs.length > 0 && (
         <div className="mb-6 space-y-4">
           {requiredInputs.map((input, index) => (
@@ -372,8 +436,7 @@ export function GridImageSection({
         </div>
       )}
 
-      {/* Images Grid - Left Aligned */}
-      <div className="grid grid-cols-8 gap-4 justify-start items-center">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 4xl:grid-cols-7 gap-4 justify-start items-center">
         {items.map((item, index) => (
           <GridImageCard
             key={item.id}
@@ -382,10 +445,8 @@ export function GridImageSection({
             index={index}
             onFileChange={(file) => handleFileChange(index, file)}
             onLabelChange={(label) => handleLabelChange(index, label)}
-            onDelete={() => {
-              const newItems = items.filter((_, i) => i !== index);
-              onItemsChange(newItems);
-            }}
+            onStageForDelete={onStageForDelete}
+            onStageForReplace={onStageForReplace}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
@@ -396,7 +457,6 @@ export function GridImageSection({
           />
         ))}
 
-        {/* Add New Image Button */}
         <Card
           style={{ height: '200px', width: '220px' }}
           className="border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer flex items-center justify-center transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-gray-50"
@@ -416,7 +476,6 @@ export function GridImageSection({
         </Card>
       </div>
 
-      {/* JSON Data Display (for debugging) */}
       {jsonData && (
         <div className="mt-4 p-4 bg-gray-100 rounded">
           <h4 className="text-sm font-medium mb-2">JSON Data:</h4>

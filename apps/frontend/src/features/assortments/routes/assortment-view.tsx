@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { Breadcrumbs } from '@/components/breadcrumbts';
 import useGetInitialData from '@/hooks/useGetInititalData';
-import { AssortmentHeader, AssortmentItem } from '..';
+import { AssortmentHeader } from '..';
 import {
   useGetAssortment,
   getAssortmentQuery,
@@ -78,7 +78,7 @@ export function AssortmentView({
         ]}
       />
       <AssortmentHeader assortment={assortment} isLoading={isLoading} />
-      {assortment && <AssortmentItem assortment={assortment} />}
+      {/* {assortment && <AssortmentItem assortment={assortment} />} */}
     </>
   );
 }

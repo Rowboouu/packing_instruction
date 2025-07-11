@@ -63,14 +63,14 @@ export const packingInstructionTableColumns: ColumnDef<AssortmentRowData>[] = [
   {
     accessorKey: 'itemNo',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="ITEM NO." />
+      <DataTableColumnHeader column={column} title="ASSORTMENT NUMBER" />
     ),
     cell: ({ row }) => <ClickableItemNoCell row={row} />,
   },
   {
     accessorKey: 'customerItemNo',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="CUSTOMER ITEM NO." />
+      <DataTableColumnHeader column={column} title="CUSTOMER ITEM NUMBER" />
     ),
     cell: ({ row }) => {
       const customerItemNo = row.getValue('customerItemNo') as string;
@@ -101,30 +101,6 @@ export const packingInstructionTableColumns: ColumnDef<AssortmentRowData>[] = [
       return (
         <div className="px-2 text-sm">
           {length_cm} × {width_cm} × {height_cm} cm
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: 'imageCount',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="IMAGES" />
-    ),
-    cell: ({ row }) => {
-      const imageCount = row.getValue('imageCount') as number;
-      const hasImages = imageCount > 0;
-      
-      return (
-        <div className="px-2">
-          {hasImages ? (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              {imageCount} images
-            </span>
-          ) : (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-              No images
-            </span>
-          )}
         </div>
       );
     },

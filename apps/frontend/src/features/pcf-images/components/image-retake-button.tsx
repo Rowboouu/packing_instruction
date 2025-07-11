@@ -22,13 +22,50 @@ export function ImageRetakeButton({ assortmentId, item }: Props) {
       const { _id, isApproved } = variable as UpdatePCFImageStatusDTO;
       queryClient.setQueryData<AssortmentPCF>(
         [QUERY_KEYS.ASSORTMENTS, assortmentId],
-        (old: AssortmentPCF | undefined) => ({
-          ...old!,
-          pcfImages:
-            old?.pcfImages.map((pcf) =>
-              pcf._id === _id ? { ...pcf, isApproved } : pcf,
-            ) || [],
-        }),
+        (old: AssortmentPCF | undefined) => {
+          if (!old) return old;
+          
+          // FIX: Maintain the correct pcfImages structure
+          const updatedPcfImages = { ...old.pcfImages };
+          
+          // Update across all image categories
+          if (updatedPcfImages.itemPackImages) {
+            updatedPcfImages.itemPackImages = updatedPcfImages.itemPackImages.map((packArray: any[]) =>
+              packArray.map((pcf: any) =>
+                pcf._id === _id ? { ...pcf, isApproved } : pcf
+              )
+            );
+          }
+          
+          if (updatedPcfImages.itemBarcodeImages) {
+            updatedPcfImages.itemBarcodeImages = updatedPcfImages.itemBarcodeImages.map((pcf: any) =>
+              pcf._id === _id ? { ...pcf, isApproved } : pcf
+            );
+          }
+          
+          if (updatedPcfImages.displayImages) {
+            updatedPcfImages.displayImages = updatedPcfImages.displayImages.map((pcf: any) =>
+              pcf._id === _id ? { ...pcf, isApproved } : pcf
+            );
+          }
+          
+          if (updatedPcfImages.innerCartonImages) {
+            updatedPcfImages.innerCartonImages = updatedPcfImages.innerCartonImages.map((pcf: any) =>
+              pcf._id === _id ? { ...pcf, isApproved } : pcf
+            );
+          }
+          
+          if (updatedPcfImages.masterCartonImages) {
+            updatedPcfImages.masterCartonImages = updatedPcfImages.masterCartonImages.map((pcf: any) =>
+              pcf._id === _id ? { ...pcf, isApproved } : pcf
+            );
+          }
+
+          return {
+            ...old,
+            pcfImages: updatedPcfImages,
+          };
+        },
       );
 
       return { prevAssortment: assortment };

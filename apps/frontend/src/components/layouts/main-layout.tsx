@@ -11,7 +11,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     <>
       {/*<SideNavBar />*/}  {/*user={user}*/}
       {/*<TopNavBar />*/}{/*user={user}*/}
-      <main className="content">{children}</main>
+      <main className="content px-12">{children}</main>
     </>
   );
 };

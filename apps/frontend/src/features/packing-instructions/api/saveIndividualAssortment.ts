@@ -37,9 +37,9 @@ export function useSaveIndividualAssortment(
 
   return useMutation({
     mutationFn: saveIndividualAssortment,
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       if (showToast) {
-        toast.success(`Saved ${variables.assortment.itemNo} for standalone access`);
+        toast.success(`Saved Assortment for standalone access`);
       }
     },
     onError: (error) => {

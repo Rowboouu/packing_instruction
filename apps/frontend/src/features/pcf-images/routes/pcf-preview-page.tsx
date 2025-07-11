@@ -1,29 +1,16 @@
+// SIMPLIFIED pcf-preview-page.tsx - Use existing data structure
+
 import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { Assortment, AssortmentPCF } from '@/features/assortments';
 import { useTranslation } from 'react-i18next';
 import { PreviewPDFContainer, ReportButton } from '..';
 import { useUpdateAssortment } from '@/features/packing-instructions';
-
-// Interface matching the Odoo webhook payload structure
-interface OdooPcfImage {
-  id: number;
-  componentName: string;
-  image: string; // Base64 encoded
-  filename: string;
-}
-
-interface OdooPcfImages {
-  itemPackImages: OdooPcfImage[][];
-  itemBarcodeImages: OdooPcfImage[];
-  displayImages: OdooPcfImage[];
-  innerCartonImages: OdooPcfImage[];
-  masterCartonImages: OdooPcfImage[];
-}
+import { useGetWebhookAssortment } from '@/features/packing-instructions';
 
 export interface PCFPreviewPageProps<T extends Assortment> {
   assortment: T & {
-    pcfImages?: OdooPcfImages;
+    pcfImages?: any;
     status?: string;
   };
 }
@@ -33,100 +20,211 @@ export function PCFPreviewPage<T extends Assortment>({
 }: PCFPreviewPageProps<T>) {
   const { t } = useTranslation();
   const { mutate, isPending: isMutatePending } = useUpdateAssortment();
-
-  // Type guard for assortment with pcfImages
-  const assortmentWithImages = assortment as T & { pcfImages?: OdooPcfImages; status?: string };
+  
+  // ✅ SIMPLE: Get the same data structure used in pcf-images-page
+  const assortmentItemNo = 
+    (assortment as any)?.itemNo || 
+    (assortment as any)?.baseAssortment?.itemNo || 
+    (assortment as any)?._id || '';
+    
+  const { data: freshMongoData } = useGetWebhookAssortment(
+    assortmentItemNo,
+    { enabled: !!assortmentItemNo, staleTime: 0, gcTime: 0, refetchOnMount: true, refetchOnWindowFocus: false }
+  );
+  
+  // ✅ SIMPLE: Use the same logic as pcf-images-page
+  const actualAssortment = freshMongoData || assortment;
+  const assortmentId = 
+    (actualAssortment as any)?.baseAssortment?.itemNo || 
+    (actualAssortment as any)?.itemNo || 
+    (actualAssortment as any)?._id || '';
 
   const handleApprovedClick = () => {
-    // Check if the assortment has a status property and if the mutation supports it
-    if ('status' in assortmentWithImages) {
-      try {
-        // Attempt to update with status - you may need to adjust this based on your actual API
-        mutate({ 
-          _id: assortmentWithImages._id, 
-          // Add other required fields for your update mutation
-          // status: 'approved' 
-        } as any);
-        console.log('Approval process initiated for assortment:', assortmentWithImages._id);
-      } catch (error) {
-        console.error('Error updating assortment status:', error);
-      }
-    } else {
-      console.log('Status update not supported or assortment missing status property');
+    try {
+      mutate({ 
+        _id: assortmentId,
+      } as any);
+      console.log('Approval process initiated for assortment:', assortmentId);
+    } catch (error) {
+      console.error('Error updating assortment status:', error);
     }
   };
 
-  // Helper function to transform Odoo structure to AssortmentPCF format
-  const transformToAssortmentPCF = (assortment: T): AssortmentPCF => {
-    const pcfImages = assortmentWithImages.pcfImages;
-    
-    if (!pcfImages) {
-      // Return assortment with empty pcfImages array if no images
-      return {
-        ...assortment,
-        pcfImages: []
-      } as unknown as AssortmentPCF;
+  // ✅ SIMPLE: Extract data the same way as pcf-images-page
+  const currentWebhookImages = 
+    (actualAssortment as any)?.baseAssortment?.webhookImages || 
+    (actualAssortment as any)?.pcfImages;
+  const currentUserMods = 
+    (freshMongoData as any)?.userModifications || 
+    (actualAssortment as any)?.userModifications || 
+    null;
+
+  // ✅ SIMPLE: Calculate image statistics like pcf-images-page
+  const getImageStats = () => {
+    if (!currentWebhookImages && !currentUserMods?.uploadedImages) {
+      return { total: 0, sections: 0, hasImages: false };
     }
 
-    // Flatten all image arrays into a single array for compatibility
-    const allImages: OdooPcfImage[] = [
-      ...(pcfImages.itemPackImages?.flatMap((packArray: OdooPcfImage[]) => packArray) || []),
-      ...(pcfImages.itemBarcodeImages || []),
-      ...(pcfImages.displayImages || []),
-      ...(pcfImages.innerCartonImages || []),
-      ...(pcfImages.masterCartonImages || [])
-    ];
+    const webhookCounts = {
+      itemPack: currentWebhookImages?.itemPackImages?.reduce((acc: number, packArray: any[]) => acc + packArray.length, 0) || 0,
+      barcode: currentWebhookImages?.itemBarcodeImages?.length || 0,
+      display: currentWebhookImages?.displayImages?.length || 0,
+      inner: currentWebhookImages?.innerCartonImages?.length || 0,
+      master: currentWebhookImages?.masterCartonImages?.length || 0,
+    };
 
-    // Transform Odoo images to the format expected by PreviewPDFContainer
-    const transformedImages = allImages.map((odooImage) => ({
-      id: odooImage.id,
-      componentName: odooImage.componentName,
-      image: odooImage.image,
-      filename: odooImage.filename,
-      // Add any other properties required by your PcfImage interface
-    }));
+    const userCounts = {
+      itemPack: currentUserMods?.uploadedImages?.itemPackImages?.length || 0,
+      barcode: currentUserMods?.uploadedImages?.itemBarcodeImages?.length || 0,
+      display: currentUserMods?.uploadedImages?.displayImages?.length || 0,
+      inner: currentUserMods?.uploadedImages?.innerCartonImages?.length || 0,
+      master: currentUserMods?.uploadedImages?.masterCartonImages?.length || 0,
+    };
+    
+    const total = Object.values(webhookCounts).reduce((a, b) => a + b, 0) + 
+                  Object.values(userCounts).reduce((a, b) => a + b, 0);
+    
+    const sections = (currentWebhookImages?.itemPackImages?.length || 0) + 
+      ((webhookCounts.barcode + userCounts.barcode) > 0 ? 1 : 0) + 
+      ((webhookCounts.display + userCounts.display) > 0 ? 1 : 0) + 
+      ((webhookCounts.inner + userCounts.inner) > 0 ? 1 : 0) + 
+      ((webhookCounts.master + userCounts.master) > 0 ? 1 : 0);
+
+    return { 
+      total, 
+      sections, 
+      hasImages: total > 0,
+      itemPackSections: currentWebhookImages?.itemPackImages?.length || 0,
+      webhookCounts,
+      userCounts
+    };
+  };
+
+  // ✅ SIMPLE: Transform data for PreviewPDFContainer using actual structure
+  const transformToAssortmentPCF = (): AssortmentPCF => {
+    console.log('🔍 Preview Transform - Webhook images:', currentWebhookImages);
+    console.log('🔍 Preview Transform - User mods:', currentUserMods);
+    
+    // Create the data structure that PreviewPDFContainer expects
+    const previewData = {
+      // ✅ Final Product Images: Last image from each itemPack array
+      finalProductImages: currentWebhookImages?.itemPackImages?.map((packArray: any[]) => 
+        packArray[packArray.length - 1]
+      ).filter(Boolean) || [],
+
+      // ✅ How to Pack: All itemPack arrays formatted
+      howToPackSingleProduct: currentWebhookImages?.itemPackImages?.map((packArray: any[], index: number) => ({
+        rowIndex: index,
+        images: packArray,
+        formattedDisplay: packArray.map((img: any, i: number) => ({
+          image: img,
+          separator: i === packArray.length - 1 ? '=' : '+',
+          isLast: i === packArray.length - 1
+        }))
+      })) || [],
+
+      // ✅ Barcode Images: Direct from webhook + user uploads
+      barcodeImages: [
+        ...(currentWebhookImages?.itemBarcodeImages || []),
+        ...(currentUserMods?.uploadedImages?.itemBarcodeImages?.map((file: any) => ({
+          id: Math.random(),
+          componentName: file.originalname,
+          image: `/webhook/pcf-images/${file.filename}`,
+          filename: file.filename,
+          isUserUpload: true
+        })) || [])
+      ],
+
+      // ✅ Display Images: Direct from webhook + user uploads
+      displayImages: [
+        ...(currentWebhookImages?.displayImages || []),
+        ...(currentUserMods?.uploadedImages?.displayImages?.map((file: any) => ({
+          id: Math.random(),
+          componentName: file.originalname,
+          image: `/webhook/pcf-images/${file.filename}`,
+          filename: file.filename,
+          isUserUpload: true
+        })) || [])
+      ],
+
+      // ✅ Inner Carton Images: Direct from webhook + user uploads
+      innerCartonImages: [
+        ...(currentWebhookImages?.innerCartonImages || []),
+        ...(currentUserMods?.uploadedImages?.innerCartonImages?.map((file: any) => ({
+          id: Math.random(),
+          componentName: file.originalname,
+          image: `/webhook/pcf-images/${file.filename}`,
+          filename: file.filename,
+          isUserUpload: true
+        })) || [])
+      ],
+
+      // ✅ Master Carton Images: Direct from webhook + user uploads
+      masterCartonImages: [
+        ...(currentWebhookImages?.masterCartonImages || []),
+        ...(currentUserMods?.uploadedImages?.masterCartonImages?.map((file: any) => ({
+          id: Math.random(),
+          componentName: file.originalname,
+          image: `/webhook/pcf-images/${file.filename}`,
+          filename: file.filename,
+          isUserUpload: true
+        })) || [])
+      ],
+
+      // ✅ Shipping Marks: Find from user uploads by filename pattern
+      shippingMarks: {
+        innerCartonMark: currentUserMods?.uploadedImages?.innerCartonImages?.find((file: any) => 
+          file.originalname.toLowerCase().includes('shipping') || 
+          file.originalname.toLowerCase().includes('mark')
+        ),
+        mainShippingMark: currentUserMods?.uploadedImages?.masterCartonImages?.find((file: any) => 
+          file.originalname.toLowerCase().includes('main') && 
+          file.originalname.toLowerCase().includes('shipping')
+        ),
+        sideShippingMark: currentUserMods?.uploadedImages?.masterCartonImages?.find((file: any) => 
+          file.originalname.toLowerCase().includes('side') && 
+          file.originalname.toLowerCase().includes('shipping')
+        )
+      }
+    };
+
+    console.log('🔍 Preview Transform - Final preview data:', previewData);
 
     return {
-      ...assortment,
-      pcfImages: transformedImages
+      ...actualAssortment,
+      pcfImages: previewData
     } as unknown as AssortmentPCF;
   };
 
-  // Calculate image statistics for display
-  const getImageStats = () => {
-    const pcfImages = assortmentWithImages.pcfImages;
-    if (!pcfImages) return { total: 0, sections: 0 };
-
-    const itemPackCount = pcfImages.itemPackImages?.reduce(
-      (acc, packArray) => acc + packArray.length, 0
-    ) || 0;
-    const barcodeCount = pcfImages.itemBarcodeImages?.length || 0;
-    const displayCount = pcfImages.displayImages?.length || 0;
-    const innerCount = pcfImages.innerCartonImages?.length || 0;
-    const masterCount = pcfImages.masterCartonImages?.length || 0;
-    
-    const total = itemPackCount + barcodeCount + displayCount + innerCount + masterCount;
-    const sections = (pcfImages.itemPackImages?.length || 0) + 
-      (barcodeCount > 0 ? 1 : 0) + 
-      (displayCount > 0 ? 1 : 0) + 
-      (innerCount > 0 ? 1 : 0) + 
-      (masterCount > 0 ? 1 : 0);
-
-    return { total, sections, itemPackSections: pcfImages.itemPackImages?.length || 0 };
-  };
-
   const imageStats = getImageStats();
-  const isApproved = assortmentWithImages.status === 'approved';
+  const isApproved = (actualAssortment as any)?.status === 'approved';
+
+  console.log('🔍 PCF Preview - Image stats:', imageStats);
+  console.log('🔍 PCF Preview - Has images:', imageStats.hasImages);
 
   return (
     <>
-      {/* Header with image statistics */}
+      {/* Debug info for development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+          <strong>Debug:</strong> Total images: {imageStats.total}, 
+          Webhook: {!!currentWebhookImages ? 'Yes' : 'No'}, 
+          UserMods: {!!currentUserMods ? 'Yes' : 'No'}
+        </div>
+      )}
+
+      {/* Enhanced Header with detailed statistics */}
       <div className="mb-4 p-4 bg-gray-50 rounded-lg">
         <div className="flex justify-between items-center text-sm text-gray-600">
           <div className="flex gap-6">
             <span>Total Images: <strong>{imageStats.total}</strong></span>
             <span>Active Sections: <strong>{imageStats.sections}</strong></span>
             <span>Item Pack Groups: <strong>{imageStats.itemPackSections}</strong></span>
+            {currentUserMods && imageStats.userCounts && (
+              <span className="text-blue-600">
+                User Uploads: <strong>{Object.values(imageStats.userCounts).reduce((a, b) => a + b, 0)}</strong>
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -148,7 +246,7 @@ export function PCFPreviewPage<T extends Assortment>({
         <div className="grid col-span-4">
           <div className="flex items-center justify-center gap-6">
             <ReportButton
-              itemId={assortment._id}
+              itemId={assortmentId}
               itemType="item"
               reportType="pdf"
             >
@@ -159,7 +257,7 @@ export function PCFPreviewPage<T extends Assortment>({
             </ReportButton>
 
             <ReportButton
-              itemId={assortment._id}
+              itemId={assortmentId}
               itemType="item"
               reportType="excel"
             >
@@ -172,7 +270,7 @@ export function PCFPreviewPage<T extends Assortment>({
             </ReportButton>
             
             <ReportButton
-              itemId={assortment._id}
+              itemId={assortmentId}
               itemType="item"
               reportType="pdf"
             >
@@ -185,7 +283,7 @@ export function PCFPreviewPage<T extends Assortment>({
             </ReportButton>
 
             <ReportButton
-              itemId={assortment._id}
+              itemId={assortmentId}
               itemType="item"
               reportType="excel"
             >
@@ -229,9 +327,9 @@ export function PCFPreviewPage<T extends Assortment>({
 
       {/* Preview Section */}
       <div className="mt-4 overflow-hidden flex justify-center bg-white p-5 rounded-xl">
-        {imageStats.total > 0 ? (
+        {imageStats.hasImages ? (
           <PreviewPDFContainer
-            assortment={transformToAssortmentPCF(assortment)}
+            assortment={transformToAssortmentPCF()}
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -245,54 +343,77 @@ export function PCFPreviewPage<T extends Assortment>({
         )}
       </div>
 
-      {/* Image Breakdown Section */}
-      {imageStats.total > 0 && (
+      {/* Enhanced Image Breakdown Section */}
+      {imageStats.hasImages && imageStats.webhookCounts && imageStats.userCounts && (
         <div className="mt-6 grid grid-cols-5 gap-4">
-          {assortmentWithImages.pcfImages?.itemPackImages && assortmentWithImages.pcfImages.itemPackImages.length > 0 && (
+          {(imageStats.webhookCounts.itemPack + imageStats.userCounts.itemPack) > 0 && (
             <div className="bg-blue-50 p-4 rounded-lg text-center">
               <div className="text-2xl font-bold text-blue-600">
-                {assortmentWithImages.pcfImages.itemPackImages.reduce((acc, pack) => acc + pack.length, 0)}
+                {imageStats.webhookCounts.itemPack + imageStats.userCounts.itemPack}
               </div>
               <div className="text-sm text-blue-800">Item Pack Images</div>
               <div className="text-xs text-blue-600 mt-1">
-                {assortmentWithImages.pcfImages.itemPackImages.length} groups
+                {imageStats.itemPackSections} groups
+                {imageStats.userCounts.itemPack > 0 && (
+                  <span className="block">+ {imageStats.userCounts.itemPack} user uploads</span>
+                )}
               </div>
             </div>
           )}
           
-          {assortmentWithImages.pcfImages?.itemBarcodeImages && assortmentWithImages.pcfImages.itemBarcodeImages.length > 0 && (
+          {(imageStats.webhookCounts.barcode + imageStats.userCounts.barcode) > 0 && (
             <div className="bg-green-50 p-4 rounded-lg text-center">
               <div className="text-2xl font-bold text-green-600">
-                {assortmentWithImages.pcfImages.itemBarcodeImages.length}
+                {imageStats.webhookCounts.barcode + imageStats.userCounts.barcode}
               </div>
               <div className="text-sm text-green-800">Barcode Images</div>
+              {imageStats.userCounts.barcode > 0 && (
+                <div className="text-xs text-green-600 mt-1">
+                  + {imageStats.userCounts.barcode} user uploads
+                </div>
+              )}
             </div>
           )}
           
-          {assortmentWithImages.pcfImages?.displayImages && assortmentWithImages.pcfImages.displayImages.length > 0 && (
+          {(imageStats.webhookCounts.display + imageStats.userCounts.display) > 0 && (
             <div className="bg-purple-50 p-4 rounded-lg text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {assortmentWithImages.pcfImages.displayImages.length}
+                {imageStats.webhookCounts.display + imageStats.userCounts.display}
               </div>
               <div className="text-sm text-purple-800">Display Images</div>
+              {imageStats.userCounts.display > 0 && (
+                <div className="text-xs text-purple-600 mt-1">
+                  + {imageStats.userCounts.display} user uploads
+                </div>
+              )}
             </div>
           )}
           
-          {assortmentWithImages.pcfImages?.innerCartonImages && assortmentWithImages.pcfImages.innerCartonImages.length > 0 && (
+          {(imageStats.webhookCounts.inner + imageStats.userCounts.inner) > 0 && (
             <div className="bg-orange-50 p-4 rounded-lg text-center">
               <div className="text-2xl font-bold text-orange-600">
-                {assortmentWithImages.pcfImages.innerCartonImages.length}
+                {imageStats.webhookCounts.inner + imageStats.userCounts.inner}
               </div>
               <div className="text-sm text-orange-800">Inner Carton Images</div>
+              {imageStats.userCounts.inner > 0 && (
+                <div className="text-xs text-orange-600 mt-1">
+                  + {imageStats.userCounts.inner} user uploads
+                </div>
+              )}
             </div>
           )}
           
-          {assortmentWithImages.pcfImages?.masterCartonImages && assortmentWithImages.pcfImages.masterCartonImages.length > 0 && (
+          {(imageStats.webhookCounts.master + imageStats.userCounts.master) > 0 && (
             <div className="bg-red-50 p-4 rounded-lg text-center">
               <div className="text-2xl font-bold text-red-600">
-                {assortmentWithImages.pcfImages.masterCartonImages.length}
+                {imageStats.webhookCounts.master + imageStats.userCounts.master}
               </div>
               <div className="text-sm text-red-800">Master Carton Images</div>
+              {imageStats.userCounts.master > 0 && (
+                <div className="text-xs text-red-600 mt-1">
+                  + {imageStats.userCounts.master} user uploads
+                </div>
+              )}
             </div>
           )}
         </div>
