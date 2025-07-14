@@ -133,11 +133,16 @@ export interface UserModifications {
       itemPackImages: PcfImage[];
       itemBarcodeImages: PcfImage[];
       displayImages: PcfImage[];
-      innerCartonImages: PcfImage[];
-      masterCartonImages: PcfImage[];
+      innerCartonImages: PcfImage[]; // ✅ Regular inner carton images
+      masterCartonImages: PcfImage[]; // ✅ Regular master carton images
+      
+      // ✅ NEW: Separate shipping mark arrays (extracted from labels)
+      innerCartonShippingMarks?: PcfImage[];
+      masterCartonMainShippingMarks?: PcfImage[];
+      masterCartonSideShippingMarks?: PcfImage[];
     };
   };
-  imageLabels: Record<string, string>;
+  imageLabels: Record<string, string>; // ✅ Enhanced with shipping mark detection
   customFields: Record<string, any>;
   formData: {
     productInCarton?: number;
@@ -147,6 +152,14 @@ export interface UserModifications {
     unit?: string;
     cubicUnit?: string;
     wtUnit?: string;
+  };
+  // ✅ NEW: Track shipping mark allocation
+  shippingMarkMetadata?: {
+    totalShippingMarks: number;
+    innerMarks: number;
+    mainMarks: number;
+    sideMarks: number;
+    lastUpdated: Date;
   };
 }
 
@@ -288,9 +301,27 @@ export interface UploadImagesDTO {
   displayImages?: File[];
   innerCartonImages?: File[];
   masterCartonImages?: File[];
-  imageLabels?: Record<string, string>;
-  isWebhookData?: boolean; // Flag for different handling
+  imageLabels?: Record<string, string>; // ✅ ENHANCED: Now supports shipping mark labels
+  isWebhookData?: boolean;
+  
+  // ✅ NEW: Optional separate shipping mark arrays (for future use)
+  innerCartonShippingMarks?: File[];
+  masterCartonMainShippingMarks?: File[];
+  masterCartonSideShippingMarks?: File[];
 }
+
+export const SHIPPING_MARK_LABELS = {
+  INNER_SHIPPING_MARK: 'inner_shipping_mark',
+  MASTER_MAIN_SHIPPING_MARK: 'main_shipping_mark', 
+  MASTER_SIDE_SHIPPING_MARK: 'side_shipping_mark',
+} as const;
+
+export type ShippingMarkLabel = typeof SHIPPING_MARK_LABELS[keyof typeof SHIPPING_MARK_LABELS];
+
+// ✅ NEW: Helper function to detect shipping mark labels
+export const isShippingMarkLabel = (label: string): label is ShippingMarkLabel => {
+  return Object.values(SHIPPING_MARK_LABELS).includes(label as ShippingMarkLabel);
+};
 
 // API Response types
 export interface WebhookDataResponse {

@@ -1,24 +1,12 @@
-// import { EditableField } from '@/components/editable-field';
-import { Form, FormField } from '@/components/ui/form';
-import { AssortmentPCF } from '@/features/assortments';
-import {
-  UpdateAssortmentDTO,
-  updateAssortmentSchema,
-  useUpdateAssortment,
-} from '@/features/assortments/api/updateAssortment';
-// import { useGetSalesOrderOrderId } from '@/features/sales-orders/api/getSaleOrderByOrderId';
-import { groupPCFImages } from '@/utils/pcf-util';
-import { zodResolver } from '@hookform/resolvers/zod';
-// import { format } from 'date-fns';
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { Form, FormField } from '@/components/ui/form';
+import { AssortmentData } from '@/features/packing-instructions';
+import { useUpdateAssortment } from '@/features/packing-instructions';
 import { PCFImageContent } from '..';
-import fragile from '../../../assets/img/packaging-icons/Fragile.jpg';
-import handleWithCare from '../../../assets/img/packaging-icons/Handle-With-Care.jpg';
-import thisWayUp from '../../../assets/img/packaging-icons/This-Way-Up.jpg';
 
 interface PreviewPDFContainerProps {
-  assortment: AssortmentPCF;
+  assortment: AssortmentData;
 }
 
 export const PreviewPDFContainer = React.forwardRef<
@@ -27,53 +15,212 @@ export const PreviewPDFContainer = React.forwardRef<
 >((props, ref) => {
   const { assortment } = props;
 
-  // FIX: Handle the pcfImages structure properly for groupPCFImages
-  const pcfImagesForGrouping = React.useMemo(() => {
-    const pcfImages = assortment?.pcfImages;
+  console.log('🔍 PreviewPDFContainer - Received AssortmentData:', assortment);
+
+  // ✅ UPDATED: Extract data from AssortmentData structure
+  const extractedData = React.useMemo(() => {
+    // Check if we have the new transformed data structure passed as pcfImages
+    const pcfImages = (assortment as any)?.pcfImages;
     
-    if (!pcfImages) return [];
-    
-    // If pcfImages is already an array, use it directly
-    if (Array.isArray(pcfImages)) {
-      return pcfImages;
-    }
-    
-    // If pcfImages is an object with categorized arrays, flatten it
-    if (typeof pcfImages === 'object') {
-      const allImages: any[] = [];
-      Object.values(pcfImages).forEach((imageArray: any) => {
-        if (Array.isArray(imageArray)) {
-          // Handle nested arrays (like itemPackImages)
-          if (Array.isArray(imageArray[0])) {
-            imageArray.forEach((nestedArray: any[]) => {
-              if (Array.isArray(nestedArray)) {
-                allImages.push(...nestedArray);
-              }
-            });
-          } else {
-            allImages.push(...imageArray);
-          }
+    if (pcfImages && typeof pcfImages === 'object' && !Array.isArray(pcfImages) && 
+        ('finalProductImages' in pcfImages || 'barcodeImages' in pcfImages || 'shippingMarks' in pcfImages)) {
+      console.log('🔍 Using new transformed data structure from props');
+      
+      return {
+        finalProductImages: pcfImages.finalProductImages || [],
+        howToPackSingleProduct: pcfImages.howToPackSingleProduct || [],
+        barcodeImages: pcfImages.barcodeImages || [],
+        displayImages: pcfImages.displayImages || [],
+        innerCartonImages: pcfImages.innerCartonImages || [],
+        masterCartonImages: pcfImages.masterCartonImages || [],
+        innerCartonPackMark: pcfImages.innerCartonPackMark || null,
+        mainShippingMark: pcfImages.mainShippingMark || null,
+        sideShippingMark: pcfImages.sideShippingMark || null,
+        innerCartonDimensions: pcfImages.innerCartonPacking?.dimensions || {
+          length: assortment.baseAssortment?.inner_carton_length_cm || 0,
+          width: assortment.baseAssortment?.inner_carton_width_cm || 0,
+          height: assortment.baseAssortment?.inner_carton_height_cm || 0
+        },
+        masterCartonDimensions: pcfImages.masterCartonPack?.dimensions || {
+          length: assortment.baseAssortment?.master_carton_length_cm || 0,
+          width: assortment.baseAssortment?.master_carton_width_cm || 0,
+          height: assortment.baseAssortment?.master_carton_height_cm || 0
         }
-      });
-      return allImages;
+      };
     }
+
+    // ✅ STANDARD: Extract from AssortmentData structure
+    console.log('🔍 Using standard AssortmentData structure');
     
-    return [];
-  }, [assortment?.pcfImages]);
+    const webhookImages = assortment.baseAssortment?.webhookImages;
+    const userMods = assortment.userModifications;
+    const mergedData = assortment.mergedData;
 
-  const groupedImages = groupPCFImages(pcfImagesForGrouping);
+    if (!webhookImages && !userMods && !mergedData) {
+      console.log('❌ No image data found in AssortmentData');
+      return {
+        finalProductImages: [],
+        howToPackSingleProduct: [],
+        barcodeImages: [],
+        displayImages: [],
+        innerCartonImages: [],
+        masterCartonImages: [],
+        innerCartonPackMark: null,
+        mainShippingMark: null,
+        sideShippingMark: null,
+        innerCartonDimensions: {
+          length: assortment.baseAssortment?.inner_carton_length_cm || 0,
+          width: assortment.baseAssortment?.inner_carton_width_cm || 0,
+          height: assortment.baseAssortment?.inner_carton_height_cm || 0
+        },
+        masterCartonDimensions: {
+          length: assortment.baseAssortment?.master_carton_length_cm || 0,
+          width: assortment.baseAssortment?.master_carton_width_cm || 0,
+          height: assortment.baseAssortment?.master_carton_height_cm || 0
+        }
+      };
+    }
 
-  // Extract images based on the new schema sections
-  const itemPackImages = groupedImages.itemPackImages || [];
-  const itemBarcodeImages = groupedImages.itemBarcodeImages || [];
-  const displayImages = groupedImages.displayImages || [];
-  const innerCartonImages = groupedImages.innerCartonImages || [];
-  const masterCartonImages = groupedImages.masterCartonImages || [];
+    // Use mergedData if available, otherwise combine webhook + user data
+    const allImages = mergedData?.allImages || {
+      itemPackImages: [
+        ...(webhookImages?.itemPackImages?.flat() || []),
+        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.itemPackImages) : [])
+      ],
+      itemBarcodeImages: [
+        ...(webhookImages?.itemBarcodeImages || []),
+        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.itemBarcodeImages) : [])
+      ],
+      displayImages: [
+        ...(webhookImages?.displayImages || []),
+        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.displayImages) : [])
+      ],
+      innerCartonImages: [
+        ...(webhookImages?.innerCartonImages || []),
+        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.innerCartonImages) : [])
+      ],
+      masterCartonImages: [
+        ...(webhookImages?.masterCartonImages || []),
+        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.masterCartonImages) : [])
+      ]
+    };
+
+    // Create final product images (last from each itemPack array)
+    const finalProductImages = webhookImages?.itemPackImages?.map((packArray: any[]) => 
+      packArray[packArray.length - 1]
+    ).filter(Boolean) || [];
+
+    // Create how to pack sequences
+    const howToPackSingleProduct = webhookImages?.itemPackImages?.map((packArray: any[], index: number) => ({
+      rowIndex: index,
+      images: packArray
+    })) || [];
+
+    // Find shipping marks from user uploads
+    const findShippingMark = (type: 'inner' | 'main' | 'side') => {
+      if (!userMods?.uploadedImages) return null;
+      
+      for (const comp of Object.values(userMods.uploadedImages)) {
+        const images = type === 'inner' ? comp.innerCartonImages : comp.masterCartonImages;
+        const found = images.find((img: any) => {
+          const name = img.originalname?.toLowerCase() || img.filename?.toLowerCase() || '';
+          if (type === 'inner') {
+            return name.includes('shipping') || name.includes('mark');
+          } else if (type === 'main') {
+            return name.includes('main') && name.includes('shipping');
+          } else {
+            return name.includes('side') && name.includes('shipping');
+          }
+        });
+        if (found) return found;
+      }
+      return null;
+    };
+
+    return {
+      finalProductImages,
+      howToPackSingleProduct,
+      barcodeImages: allImages.itemBarcodeImages,
+      displayImages: allImages.displayImages,
+      innerCartonImages: allImages.innerCartonImages,
+      masterCartonImages: allImages.masterCartonImages,
+      innerCartonPackMark: findShippingMark('inner'),
+      mainShippingMark: findShippingMark('main'),
+      sideShippingMark: findShippingMark('side'),
+      innerCartonDimensions: {
+        length: assortment.baseAssortment?.inner_carton_length_cm || 0,
+        width: assortment.baseAssortment?.inner_carton_width_cm || 0,
+        height: assortment.baseAssortment?.inner_carton_height_cm || 0
+      },
+      masterCartonDimensions: {
+        length: assortment.baseAssortment?.master_carton_length_cm || 0,
+        width: assortment.baseAssortment?.master_carton_width_cm || 0,
+        height: assortment.baseAssortment?.master_carton_height_cm || 0
+      }
+    };
+  }, [assortment]);
+
+  // ✅ ENHANCED: Calculate design statistics from itemPackImages
+  const designStats = React.useMemo(() => {
+    const webhookImages = assortment.baseAssortment?.webhookImages;
+    const itemPackImages = webhookImages?.itemPackImages || [];
+    
+    if (!itemPackImages || itemPackImages.length === 0) {
+      return {
+        numberOfDesigns: 0,
+        qtyPerDesign: 0,
+        totalQtyInner: 0
+      };
+    }
+
+    const numberOfDesigns = itemPackImages.length;
+    
+    // Find the largest array length minus 1 (since last image is the final product)
+    const qtyPerDesign = Math.max(
+      ...itemPackImages.map((packArray: any[]) => Math.max(0, packArray.length - 1))
+    );
+    
+    const totalQtyInner = numberOfDesigns * qtyPerDesign;
+
+    console.log('🔍 Design Stats:', {
+      numberOfDesigns,
+      qtyPerDesign,
+      totalQtyInner,
+      itemPackArrays: itemPackImages.map((arr: any[]) => arr.length)
+    });
+
+    return {
+      numberOfDesigns,
+      qtyPerDesign,
+      totalQtyInner
+    };
+  }, [assortment]);
 
   const update = useUpdateAssortment();
 
-  const form = useForm<UpdateAssortmentDTO>({
-    resolver: zodResolver(updateAssortmentSchema),
+  // ✅ SIMPLIFIED: Create a basic form interface without complex schemas
+  interface SimpleFormData {
+    _id: string;
+    productInCarton?: number;
+    productPerUnit?: number;
+    unit?: string;
+    masterCUFT?: number;
+    cubicUnit?: string;
+    masterGrossWeight?: number;
+    wtUnit?: string;
+  }
+
+  const form = useForm<SimpleFormData>({
+    defaultValues: {
+      _id: '',
+      productInCarton: 0,
+      productPerUnit: 0,
+      unit: 'PR',
+      masterCUFT: 0,
+      cubicUnit: 'cuft',
+      masterGrossWeight: 0,
+      wtUnit: 'lbs',
+    }
   });
 
   const [isFocused, setFocused] = React.useState(false);
@@ -87,32 +234,49 @@ export const PreviewPDFContainer = React.forwardRef<
   React.useEffect(() => {
     if (isDirty && isFocused) {
       const values = form.getValues();
-      update.mutate(values);
+      // ✅ SIMPLIFIED: Create update payload without complex DTO
+      const updatePayload = {
+        _id: values._id,
+        userModifications: {
+          formData: {
+            productInCarton: values.productInCarton,
+            productPerUnit: values.productPerUnit,
+            unit: values.unit,
+            masterCUFT: values.masterCUFT,
+            cubicUnit: values.cubicUnit,
+            masterGrossWeight: values.masterGrossWeight,
+            wtUnit: values.wtUnit
+          }
+        },
+        isWebhookData: true
+      };
+      update.mutate(updatePayload as any);
     } else {
       setFocused(false);
     }
-  }, [isDirty, isFocused]);
+  }, [isDirty, isFocused, form, update]);
 
   const resetForm = React.useCallback(() => {
-    const labels = assortment.labels?.find((label) =>
+    // Extract form data from AssortmentData structure
+    const baseAssortment = assortment.baseAssortment;
+    const userMods = assortment.userModifications;
+    const formData = userMods?.formData;
+
+    // Get labels if they exist
+    const labels = (baseAssortment as any)?.labels?.find((label: any) =>
       label.hasOwnProperty('unit'),
     );
-
     const unitVal = labels?.['unit'].value ?? 'PR';
 
     form.reset({
-      _id: assortment._id,
-      productInCarton:
-        assortment.itemInCarton || assortment.productInCarton || 0,
-      productPerUnit: assortment.itemPerUnit || assortment.productPerUnit || 0,
-      unit: assortment.unit ?? unitVal,
-      masterCUFT:
-        assortment.itemCUFT || assortment.masterCUFT || 0,
-      cubicUnit: assortment.cubicUnit ?? 'cuft',
-      masterGrossWeight:
-        assortment.itemGrossWeight ||
-        assortment.masterGrossWeight || 0, 
-      wtUnit: assortment.wtUnit ?? 'lbs',
+      _id: baseAssortment?._id || '',
+      productInCarton: formData?.productInCarton || 0,
+      productPerUnit: formData?.productPerUnit || 0,
+      unit: formData?.unit ?? unitVal,
+      masterCUFT: formData?.masterCUFT || 0,
+      cubicUnit: formData?.cubicUnit ?? 'cuft',
+      masterGrossWeight: formData?.masterGrossWeight || 0, 
+      wtUnit: formData?.wtUnit ?? 'lbs',
     });
   }, [assortment, form]);
 
@@ -120,7 +284,6 @@ export const PreviewPDFContainer = React.forwardRef<
     resetForm();
     setFocused(false);
   }, [resetForm]);
-
 
   return (
     <Form {...form}>
@@ -138,7 +301,7 @@ export const PreviewPDFContainer = React.forwardRef<
               type="text"
               className="ml-2 border border-gray-300 px-3 py-2 rounded-md col-span-2"
               defaultValue={
-                assortment.name || 'Beer Opener Keychain with Display'
+                assortment.baseAssortment?.name || 'Beer Opener Keychain with Display'
               }
             />
           </div>
@@ -147,7 +310,7 @@ export const PreviewPDFContainer = React.forwardRef<
             <input
               type="text"
               className="ml-2 border border-gray-300 px-3 py-2 col-span-2 rounded-md"
-              defaultValue={assortment.itemNo || 'A000026'}
+              defaultValue={assortment.baseAssortment?.itemNo || 'A000026'}
             />
           </div>
           <div className="grid grid-cols-5 gap-4 items-center">
@@ -155,25 +318,35 @@ export const PreviewPDFContainer = React.forwardRef<
             <input
               type="text"
               className="ml-2 border border-gray-300 px-3 py-2 col-span-2 rounded-md"
-              defaultValue={assortment.customerItemNo || 'FAR-0013'}
+              defaultValue={assortment.baseAssortment?.customerItemNo || 'FAR-0013'}
             />
           </div>
         </div>
 
-        {/* Finish Product Images Section */}
+        {/* ✅ UPDATED: Finish Product Images Section - Uses finalProductImages */}
         <div className="bg-black text-white text-center py-2 mb-4">
           <span className="text-sm font-bold">FINISH PRODUCT IMAGES</span>
         </div>
 
         <div className="p-4 mb-6 min-h-64 flex items-center justify-center">
-          {itemPackImages.map((img, idx) => (
-            <div
-              key={img._id || idx}
-              className="mx-2 flex items-center justify-center"
-            >
-              <PCFImageContent pcfImage={img} height={240} maxWidth={400} />
-            </div>
-          ))}
+          {extractedData.finalProductImages.length > 0 ? (
+            extractedData.finalProductImages.map((img: any, idx: number) => {
+              if (!img) {
+                console.warn('⚠️ Skipping undefined image in finalProductImages at index:', idx);
+                return null;
+              }
+              return (
+                <div
+                  key={img._id || img.id || idx}
+                  className="mx-2 flex items-center justify-center"
+                >
+                  <PCFImageContent pcfImage={img} height={240} maxWidth={400} />
+                </div>
+              );
+            }).filter(Boolean)
+          ) : (
+            <div className="text-gray-500">No finish product images available</div>
+          )}
         </div>
 
         {/* How to Pack Single Product Section */}
@@ -200,38 +373,54 @@ export const PreviewPDFContainer = React.forwardRef<
           </div>
         </div>
 
-        {/* Product Assembly Visualization */}
+        {/* ✅ UPDATED: Product Assembly Visualization - Uses howToPackSingleProduct */}
         <div className="p-4 mb-6">
-          <div className="flex items-center justify-center space-x-8">
-            {itemPackImages.map((img, idx) => (
-              <React.Fragment key={img._id || idx}>
-                {idx > 0 && (
-                  <div className="text-4xl font-bold">
-                    {idx === itemPackImages.length - 1 ? '→' : '+'}
-                  </div>
-                )}
-                <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
-                  <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
-                </div>
-              </React.Fragment>
-            ))}
-          </div>
+          {extractedData.howToPackSingleProduct.length > 0 ? (
+            extractedData.howToPackSingleProduct.map((row: any, rowIdx: number) => (
+              <div key={rowIdx} className="flex items-center justify-center space-x-8 mb-4">
+                {row.images?.map((img: any, idx: number) => {
+                  if (!img) {
+                    console.warn('⚠️ Skipping undefined image in howToPackSingleProduct at row:', rowIdx, 'index:', idx);
+                    return null;
+                  }
+                  return (
+                    <React.Fragment key={img._id || img.id || idx}>
+                      {idx > 0 && (
+                        <div className="text-4xl font-bold">
+                          {idx === row.images.length - 1 ? '=' : '+'}
+                        </div>
+                      )}
+                      <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+                        <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
+                      </div>
+                    </React.Fragment>
+                  );
+                }).filter(Boolean)}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-500">No packing sequence images available</div>
+          )}
         </div>
 
-        {/* Barcode Section */}
+        {/* ✅ UPDATED: Barcode Section - Uses barcodeImages */}
         <div className="bg-black text-white text-center py-2 mb-4">
           <span className="text-sm font-bold">BARCODE</span>
         </div>
 
         <div className="p-4 mb-6 min-h-48 flex items-center justify-center">
-          {itemBarcodeImages.map((img, idx) => (
-            <div
-              key={img._id || idx}
-              className="mx-2 flex items-center justify-center"
-            >
-              <PCFImageContent pcfImage={img} height={180} maxWidth={300} />
-            </div>
-          ))}
+          {extractedData.barcodeImages.length > 0 ? (
+            extractedData.barcodeImages.map((img: any, idx: number) => (
+              <div
+                key={img._id || idx}
+                className="mx-2 flex items-center justify-center"
+              >
+                <PCFImageContent pcfImage={img} height={180} maxWidth={300} />
+              </div>
+            ))
+          ) : (
+            <div className="text-gray-500">No barcode images available</div>
+          )}
         </div>
 
         {/* How to Pack Inner Carton Section */}
@@ -253,20 +442,12 @@ export const PreviewPDFContainer = React.forwardRef<
           <div>
             <div className="grid grid-cols-3 mb-2 items-center">
               <span className="font-bold mr-4">QTY / DESIGN:</span>
-              <FormField
-                control={form.control}
-                name="productPerUnit"
-                render={({ field }) => (
-                  <input
-                    {...field}
-                    type="text"
-                    className="border border-gray-300 px-3 py-2 rounded-md col-span-2"
-                    defaultValue="8"
-                    onBlur={handleOnBlurUpdate}
-                    value={field.value?.toString() || ''}
-                    onChange={(e) => field.onChange(e.target.value)}
-                  />
-                )}
+              <input
+
+                type="text"
+                className="border border-gray-300 px-3 py-2 rounded-md col-span-2"
+                defaultValue={designStats.qtyPerDesign.toString()}
+                readOnly
               />
             </div>
           </div>
@@ -279,7 +460,8 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 rounded-md col-span-2"
-                defaultValue="3"
+                defaultValue={designStats.numberOfDesigns.toString()}
+                readOnly
               />
             </div>
           </div>
@@ -289,13 +471,14 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 rounded-md col-span-2"
-                defaultValue="24"
+                defaultValue={designStats.totalQtyInner.toString()}
+                readOnly
               />
             </div>
           </div>
         </div>
 
-        {/* Display Packing Section */}
+        {/* ✅ UPDATED: Display Packing Section - Uses displayImages */}
         <div className="bg-black text-white text-center py-2 mb-4">
           <span className="text-sm font-bold">DISPLAY PACKING</span>
         </div>
@@ -310,30 +493,34 @@ export const PreviewPDFContainer = React.forwardRef<
 
         <div className="p-4 mb-6">
           <div className="flex items-center justify-center space-x-4">
-            {displayImages.map((img, idx) => (
-              <React.Fragment key={img._id || idx}>
-                {idx > 0 && (
-                  <div className="text-3xl text-center">
-                    {idx === displayImages.length - 1 ? '→' : '+'}
+            {extractedData.displayImages.length > 0 ? (
+              extractedData.displayImages.map((img: any, idx: number) => (
+                <React.Fragment key={img._id || idx}>
+                  {idx > 0 && (
+                    <div className="text-3xl text-center">
+                      {idx === extractedData.displayImages.length - 1 ? '=' : '+'}
+                    </div>
+                  )}
+                  <div
+                    className={`flex flex-col items-center ${
+                      idx < 2 ? 'w-32 h-32' : 'w-48 h-32'
+                    } bg-gray-100 border border-gray-300 mb-2 flex items-center justify-center`}
+                  >
+                    <PCFImageContent
+                      pcfImage={img}
+                      height={120}
+                      maxWidth={idx < 2 ? 120 : 180}
+                    />
                   </div>
-                )}
-                <div
-                  className={`flex flex-col items-center ${
-                    idx < 2 ? 'w-32 h-32' : 'w-48 h-32'
-                  } bg-gray-100 border border-gray-300 mb-2 flex items-center justify-center`}
-                >
-                  <PCFImageContent
-                    pcfImage={img}
-                    height={120}
-                    maxWidth={idx < 2 ? 120 : 180}
-                  />
-                </div>
-              </React.Fragment>
-            ))}
+                </React.Fragment>
+              ))
+            ) : (
+              <div className="text-gray-500">No display images available</div>
+            )}
           </div>
         </div>
 
-        {/* Inner Carton Packing Section */}
+        {/* ✅ UPDATED: Inner Carton Packing Section - Uses innerCartonImages + dimensions */}
         <div className="bg-black text-white text-center py-2 mb-4">
           <span className="text-sm font-bold">INNER CARTON PACKING</span>
         </div>
@@ -353,7 +540,7 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue="3"
+                defaultValue={assortment.baseAssortment?.inner_carton_length_cm || "0"}
               />
             </div>
             <div>
@@ -361,7 +548,7 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue="3"
+                defaultValue={assortment.baseAssortment?.inner_carton_width_cm || "0"}
               />
             </div>
             <div>
@@ -369,28 +556,32 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue="3"
+                defaultValue={assortment.baseAssortment?.inner_carton_height_cm || "0"}
               />
             </div>
           </div>
 
           <div className="flex items-center justify-center space-x-8 mb-6">
-            {innerCartonImages.map((img, idx) => (
-              <React.Fragment key={img._id || idx}>
-                {idx > 0 && (
-                  <div className="text-4xl">
-                    {idx === innerCartonImages.length - 1 ? '→' : '+'}
+            {extractedData.innerCartonImages.length > 0 ? (
+              extractedData.innerCartonImages.map((img: any, idx: number) => (
+                <React.Fragment key={img._id || idx}>
+                  {idx > 0 && (
+                    <div className="text-4xl">
+                      {idx === extractedData.innerCartonImages.length - 1 ? '=' : '+'}
+                    </div>
+                  )}
+                  <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+                    <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
                   </div>
-                )}
-                <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
-                  <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
-                </div>
-              </React.Fragment>
-            ))}
+                </React.Fragment>
+              ))
+            ) : (
+              <div className="text-gray-500">No inner carton images available</div>
+            )}
           </div>
         </div>
 
-        {/* Inner Carton/Pack Mark Section */}
+        {/* ✅ UPDATED: Inner Carton/Pack Mark Section - Now uses actual image */}
         <div className="bg-black text-white text-center py-2 mb-4">
           <span className="text-sm font-bold">INNER CARTON/PACK MARK</span>
         </div>
@@ -405,12 +596,17 @@ export const PreviewPDFContainer = React.forwardRef<
             />
           </div>
           <div className="flex items-center justify-center">
-            <div className="flex flex-col border border-black py-3 px-5 bg-white text-left">
-              <div className="text-lg font-bold">SPLASH</div>
-              <div className="text-lg font-bold">ITEM NO.: ONE73S</div>
-              <div className="text-lg font-bold">MADE IN CHINA</div>
-              <div className="text-lg font-bold">QTY: 1 SET</div>
-            </div>
+            {extractedData.innerCartonPackMark ? (
+              <div className="border border-gray-300 p-2">
+                <PCFImageContent 
+                  pcfImage={extractedData.innerCartonPackMark} 
+                  height={200} 
+                  maxWidth={300} 
+                />
+              </div>
+            ) : (
+              <div className="text-gray-500">No shipping mark image uploaded</div>
+            )}
           </div>
         </div>
 
@@ -475,7 +671,7 @@ export const PreviewPDFContainer = React.forwardRef<
           </div>
         </div>
 
-        {/* Master Carton Pack Section */}
+        {/* ✅ UPDATED: Master Carton Pack Section - Uses masterCartonImages + dimensions */}
         <div className="bg-black text-white text-center py-2 mb-4">
           <span className="text-sm font-bold">MASTER CARTON PACK</span>
         </div>
@@ -496,7 +692,7 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue="3"
+                defaultValue={assortment.baseAssortment?.master_carton_length_cm || "0"}
               />
             </div>
             <div>
@@ -504,7 +700,7 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue="3"
+                defaultValue={assortment.baseAssortment?.master_carton_width_cm || "0"}
               />
             </div>
             <div>
@@ -512,28 +708,32 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue="3"
+                defaultValue={assortment.baseAssortment?.master_carton_height_cm || "0"}
               />
             </div>
           </div>
 
           <div className="flex items-center justify-center space-x-8 mb-6">
-            {masterCartonImages.map((img, idx) => (
-              <React.Fragment key={img._id || idx}>
-                {idx > 0 && (
-                  <div className="text-4xl">
-                    {idx === masterCartonImages.length - 1 ? '→' : '+'}
+            {extractedData.masterCartonImages.length > 0 ? (
+              extractedData.masterCartonImages.map((img: any, idx: number) => (
+                <React.Fragment key={img._id || idx}>
+                  {idx > 0 && (
+                    <div className="text-4xl">
+                      {idx === extractedData.masterCartonImages.length - 1 ? '=' : '+'}
+                    </div>
+                  )}
+                  <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+                    <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
                   </div>
-                )}
-                <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
-                  <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
-                </div>
-              </React.Fragment>
-            ))}
+                </React.Fragment>
+              ))
+            ) : (
+              <div className="text-gray-500">No master carton images available</div>
+            )}
           </div>
         </div>
 
-        {/* Main Shipping Mark Section */}
+        {/* ✅ UPDATED: Main Shipping Mark Section - Now uses actual image */}
         <div className="bg-black text-white text-center py-2 mb-4">
           <span className="text-sm font-bold">MAIN SHIPPING MARK</span>
         </div>
@@ -549,37 +749,21 @@ export const PreviewPDFContainer = React.forwardRef<
           </div>
 
           <div className="flex items-center justify-center">
-            <div className="border border-black p-4 bg-white text-center min-w-[300px]">
-              <div className="flex justify-end space-x-4 mb-4">
-                <img
-                  src={handleWithCare}
-                  alt="Handle With Care"
-                  className="w-8 h-8 border border-black object-contain"
-                />
-                <img
-                  src={fragile}
-                  alt="Fragile"
-                  className="w-8 h-8 border border-black object-contain"
-                />
-                <img
-                  src={thisWayUp}
-                  alt="This Way Up"
-                  className="w-8 h-8 border border-black object-contain"
+            {extractedData.mainShippingMark ? (
+              <div className="border border-gray-300 p-2">
+                <PCFImageContent 
+                  pcfImage={extractedData.mainShippingMark} 
+                  height={250} 
+                  maxWidth={350} 
                 />
               </div>
-              <div className="flex flex-col text-left">
-                <div className="text-lg font-bold">SPLASH</div>
-                <div className="text-lg font-bold">ITEM NO.: ONE73S</div>
-                <div className="text-lg font-bold">P.O. NO.: 16713</div>
-                <div className="text-lg font-bold">MADE IN CHINA</div>
-                <div className="text-lg font-bold">CTN. NO.: ___/15</div>
-                <div className="text-lg font-bold">082024</div>
-              </div>
-            </div>
+            ) : ( 
+              <div className="text-gray-500">No main shipping mark image uploaded</div>    
+            )}
           </div>
         </div>
 
-        {/* Side Shipping Mark Section */}
+        {/* ✅ UPDATED: Side Shipping Mark Section - Now uses actual image */}
         <div className="bg-black text-white text-center py-2 mb-4">
           <span className="text-sm font-bold">SIDE SHIPPING MARK</span>
         </div>
@@ -594,18 +778,17 @@ export const PreviewPDFContainer = React.forwardRef<
             />
           </div>
           <div className="flex items-center justify-center">
-            <div className="border border-black p-2 bg-white text-left max-w-[300px]">
-              <div className="text-lg font-bold">QTY: 4 SETS</div>
-              <div className="text-lg font-bold">
-                G.W.: {form.watch('masterGrossWeight') || '___'}
-                {form.watch('wtUnit') || 'KGS'}
+            {extractedData.sideShippingMark ? (
+              <div className="border border-gray-300 p-2">
+                <PCFImageContent 
+                  pcfImage={extractedData.sideShippingMark} 
+                  height={200} 
+                  maxWidth={300} 
+                />
               </div>
-              <div className="text-lg font-bold">N. W.: ___KGS</div>
-              <div className="text-lg font-bold">
-                MEAS: {form.watch('masterCUFT') || '___'}
-                {form.watch('cubicUnit') === 'cuft' ? 'CM' : 'CM'}
-              </div>
-            </div>
+            ) : (     
+              <div className="text-gray-500">No side shipping mark image uploaded</div>
+            )}
           </div>
         </div>
       </div>

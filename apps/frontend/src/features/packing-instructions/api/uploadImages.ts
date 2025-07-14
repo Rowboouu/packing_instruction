@@ -23,6 +23,9 @@ export const uploadImagesSchema = z.object({
   displayImages: z.array(z.instanceof(File)).optional(),
   innerCartonImages: z.array(z.instanceof(File)).optional(),
   masterCartonImages: z.array(z.instanceof(File)).optional(),
+  innerCartonShippingMarks: z.array(z.instanceof(File)).optional(),
+  masterCartonMainShippingMarks: z.array(z.instanceof(File)).optional(),
+  masterCartonSideShippingMarks: z.array(z.instanceof(File)).optional(),
   imageLabels: z.record(z.string()).optional(),
 });
 
@@ -105,6 +108,9 @@ export async function uploadWebhookImages(
     'displayImages',
     'innerCartonImages',
     'masterCartonImages',
+    'innerCartonShippingMarks',
+    'masterCartonMainShippingMarks',
+    'masterCartonSideShippingMarks',
   ] as const;
 
   imageFields.forEach((field) => {

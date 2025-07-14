@@ -105,6 +105,15 @@ export class UserUploadedImages {
 
   @Prop({ type: [UserUploadedFileSchema], default: [] })
   masterCartonImages: UserUploadedFile[];
+
+  @Prop({ type: [UserUploadedFileSchema], default: [] })
+  innerCartonShippingMarks: UserUploadedFile[];
+
+  @Prop({ type: [UserUploadedFileSchema], default: [] })
+  masterCartonMainShippingMarks: UserUploadedFile[];
+
+  @Prop({ type: [UserUploadedFileSchema], default: [] })
+  masterCartonSideShippingMarks: UserUploadedFile[];
 }
 
 const UserUploadedImagesSchema = SchemaFactory.createForClass(UserUploadedImages);

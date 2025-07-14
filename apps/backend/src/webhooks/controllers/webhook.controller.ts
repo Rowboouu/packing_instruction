@@ -665,6 +665,10 @@ export class WebhookController {
       displayImages: [],
       innerCartonImages: [],
       masterCartonImages: [],
+      // ✅ NEW: Add shipping mark arrays
+      innerCartonShippingMarks: [],
+      masterCartonMainShippingMarks: [],
+      masterCartonSideShippingMarks: [],
     };
 
     if (!files || files.length === 0) {
@@ -672,39 +676,56 @@ export class WebhookController {
       return processedImages;
     }
 
-    // Process files using file mapping if provided
     files.forEach((file, index) => {
       let category = 'displayImages'; // Default category
       
       if (fileMapping && fileMapping[index.toString()]) {
         category = fileMapping[index.toString()];
-      } else {
-        // Fallback: Extract category from field name if available
-        const fieldName = file.fieldname;
-        const categoryMatch = fieldName.match(/^(\w+Images)/);
-        if (categoryMatch) {
-          category = categoryMatch[1];
-        }
       }
       
-      if (processedImages[category as keyof typeof processedImages]) {
-        processedImages[category as keyof typeof processedImages].push({
-          originalname: file.originalname,
-          filename: file.filename || `${Date.now()}-${index}-${file.originalname}`,
-          mimetype: file.mimetype,
-          size: file.size,
-          buffer: file.buffer, // ← CRITICAL: Store the actual image buffer
-          uploadedAt: new Date().toISOString()
-        });
+      const fileData = {
+        originalname: file.originalname,
+        filename: file.filename || `${Date.now()}-${index}-${file.originalname}`,
+        mimetype: file.mimetype,
+        size: file.size,
+        buffer: file.buffer,
+        uploadedAt: new Date().toISOString()
+      };
+
+      // ✅ CRITICAL FIX: Check if this file is a shipping mark
+      const label = imageLabels[file.originalname];
+      const isShippingMark = label && label.includes('shipping_mark');
+      
+      if (isShippingMark) {
+        // ✅ Route shipping marks to separate arrays
+        if (label === 'inner_shipping_mark') {
+          processedImages.innerCartonShippingMarks.push(fileData);
+          this.logger.log(`🚚 Processed inner shipping mark: ${file.originalname}`);
+        } else if (label === 'main_shipping_mark') {
+          processedImages.masterCartonMainShippingMarks.push(fileData);
+          this.logger.log(`🚚 Processed main shipping mark: ${file.originalname}`);
+        } else if (label === 'side_shipping_mark') {
+          processedImages.masterCartonSideShippingMarks.push(fileData);
+          this.logger.log(`🚚 Processed side shipping mark: ${file.originalname}`);
+        }
+      } else {
+        // ✅ Regular images go to normal categories
+        if (processedImages[category as keyof typeof processedImages]) {
+          processedImages[category as keyof typeof processedImages].push(fileData);
+        }
       }
     });
 
-    this.logger.log(`📊 Processed images by category:`, {
+    this.logger.log(`📊 Processed images:`, {
       itemPack: processedImages.itemPackImages.length,
       barcode: processedImages.itemBarcodeImages.length,
       display: processedImages.displayImages.length,
       innerCarton: processedImages.innerCartonImages.length,
-      masterCarton: processedImages.masterCartonImages.length
+      masterCarton: processedImages.masterCartonImages.length,
+      // ✅ NEW: Log shipping marks
+      innerShippingMarks: processedImages.innerCartonShippingMarks.length,
+      mainShippingMarks: processedImages.masterCartonMainShippingMarks.length,
+      sideShippingMarks: processedImages.masterCartonSideShippingMarks.length,
     });
 
     return processedImages;

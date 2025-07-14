@@ -34,6 +34,8 @@ interface GridImageItem {
   base64Data?: string;
   isMarkedForDeletion?: boolean;
   replacementFile?: File;
+  shippingMarkType?: 'inner' | 'main' | 'side'; // ✅ NEW: Track shipping mark type
+  category?: string; // ✅ NEW: Track which category this slot belongs to
 }
 
 interface ItemPackSection {
@@ -53,6 +55,7 @@ interface AccordionItemProps {
 interface ReplacementData {
   file: File;
   category?: string;
+  shippingMarkType?: 'inner' | 'main' | 'side'; // ✅ FIXED: Updated type
 }
 
 function AccordionItem({ title, isOpen, onToggle, children }: AccordionItemProps) {
@@ -159,10 +162,11 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
     }
   }, [pendingDeletions]);
 
-  // FIXED: Updated replacement staging with category tracking
+  // ✅ ENHANCED: Updated replacement staging with shipping mark type tracking
   const handleStageForReplacement = useCallback((imageFilename: string, newFile: File, category?: string) => {
     // If no category provided, we need to detect it from the current image location
     let detectedCategory = category;
+    let shippingMarkType: 'inner' | 'main' | 'side' | undefined;
     
     if (!detectedCategory) {
       // Search through all sections to find which category this image belongs to
@@ -188,7 +192,8 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
         
         if (foundImage) {
           detectedCategory = section.category;
-          console.log(`🔍 Detected category for ${imageFilename}: ${detectedCategory}`);
+          shippingMarkType = foundImage.shippingMarkType; // ✅ NEW: Capture shipping mark type
+          console.log(`🔍 Detected category for ${imageFilename}: ${detectedCategory}`, shippingMarkType ? `with shipping mark type: ${shippingMarkType}` : '');
           break;
         }
       }
@@ -198,7 +203,8 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
       const newMap = new Map(prev);
       newMap.set(imageFilename, { 
         file: newFile, 
-        category: detectedCategory || 'displayImages' // Fallback to displayImages only if detection fails
+        category: detectedCategory || 'displayImages', // Fallback to displayImages only if detection fails
+        shippingMarkType // ✅ NEW: Include shipping mark type
       });
       return newMap;
     });
@@ -228,7 +234,8 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
       }))
     );
     
-    toast.info(`Image replacement staged for ${detectedCategory || 'unknown category'}. Click 'Save Changes' to confirm.`);
+    const markInfo = shippingMarkType ? ` (${shippingMarkType} shipping mark)` : '';
+    toast.info(`Image replacement staged for ${detectedCategory || 'unknown category'}${markInfo}. Click 'Save Changes' to confirm.`);
   }, [displayItems, innerCartonItems, masterCartonItems, itemBarcodeItems, itemPackSections]);
 
   // Simplified Odoo image conversion (no base64 processing)
@@ -265,8 +272,8 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
     };
   }, [pendingDeletions]);
 
-  // User uploaded file conversion with staging awareness
-  const convertUploadedFileToGridItem = useCallback((uploadedFile: any, index: number, prefix: string): GridImageItem => {
+  // ✅ ENHANCED: User uploaded file conversion with shipping mark type detection
+  const convertUploadedFileToGridItem = useCallback((uploadedFile: any, index: number, prefix: string, shippingMarkType?: 'inner' | 'main' | 'side'): GridImageItem => {
     const filename = uploadedFile.filename || uploadedFile.originalname;
     
     const pcfImage: PcfImage = {
@@ -302,8 +309,24 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
       base64Data: `/webhook/pcf-images/${filename}`,
       isMarkedForDeletion,
       replacementFile: replacementData?.file,
+      shippingMarkType, // ✅ NEW: Include shipping mark type
     };
   }, [pendingDeletions, pendingReplacements]);
+
+  // ✅ ENHANCED: Helper function to detect shipping mark type from filename
+  const detectShippingMarkType = useCallback((filename: string): 'inner' | 'main' | 'side' | undefined => {
+    const lowerFilename = filename.toLowerCase();
+    if (lowerFilename.includes('inner') && lowerFilename.includes('shipping')) {
+      return 'inner';
+    }
+    if (lowerFilename.includes('main') && lowerFilename.includes('shipping')) {
+      return 'main';
+    }
+    if (lowerFilename.includes('side') && lowerFilename.includes('shipping')) {
+      return 'side';
+    }
+    return undefined;
+  }, []);
 
   // Helper functions for section initialization
   const initializeItemPackSectionsWithData = useCallback((webhookImages: any, userMods: any): ItemPackSection[] => {
@@ -319,6 +342,7 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
           label: 'Upload Image',
           isUploadSlot: true,
           placeholder: 'Upload product image',
+          category: 'itemPackImages', // ✅ NEW: Set category
         }],
       }];
     }
@@ -367,18 +391,22 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
         label: 'Add Image',
         isUploadSlot: true,
         placeholder: 'Upload additional image',
+        category: 'itemPackImages', // ✅ NEW: Set category
       });
     });
 
     return sections;
   }, [convertOdooImageToGridItem, convertUploadedFileToGridItem]);
 
+  // ✅ ENHANCED: Image section initialization with shipping mark field support
   const initializeImageSection = useCallback((
     images: any[] = [],
     userUploads: any[] = [],
+    shippingMarks: any[] = [], // ✅ NEW: Separate shipping marks array
     sectionName: string,
     defaultPlaceholder: string,
-    alwaysShowUploadSlot: boolean = false
+    alwaysShowUploadSlot: boolean = false,
+    category: string
   ): GridImageItem[] => {
     const items: GridImageItem[] = [];
 
@@ -390,12 +418,40 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
       );
     }
 
-    // Add user uploaded images
+    // ✅ ENHANCED: Add user uploaded images with shipping mark type detection
     if (Array.isArray(userUploads)) {
       items.push(...userUploads
-        .map((file, i) => convertUploadedFileToGridItem(file, i, `user-${sectionName}`))
+        .map((file, i) => {
+          const shippingMarkType = detectShippingMarkType(file.filename || file.originalname || '');
+          return convertUploadedFileToGridItem(file, i, `user-${sectionName}`, shippingMarkType);
+        })
         .filter(item => !item.isMarkedForDeletion)
       );
+    }
+
+    // ✅ NEW: Add shipping marks as separate items with proper identification
+    if (Array.isArray(shippingMarks)) {
+      shippingMarks.forEach((file, i) => {
+        // Shipping marks already have their type determined by the field they came from
+        let shippingMarkType: 'inner' | 'main' | 'side' | undefined;
+        if (sectionName.includes('inner')) shippingMarkType = 'inner';
+        else if (sectionName.includes('main')) shippingMarkType = 'main';
+        else if (sectionName.includes('side')) shippingMarkType = 'side';
+        
+        const shippingMarkItem = convertUploadedFileToGridItem(file, i, `shipping-${sectionName}`, shippingMarkType);
+        
+        console.log('🚚 Creating shipping mark item:', {
+          filename: file.filename || file.originalname,
+          sectionName,
+          shippingMarkType,
+          itemId: shippingMarkItem.id,
+          isMarkedForDeletion: shippingMarkItem.isMarkedForDeletion
+        });
+        
+        if (!shippingMarkItem.isMarkedForDeletion) {
+          items.push(shippingMarkItem);
+        }
+      });
     }
 
     const hasExistingImages = items.length > 0;
@@ -406,11 +462,12 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
         label: 'Add Image',
         isUploadSlot: true,
         placeholder: defaultPlaceholder,
+        category, // ✅ NEW: Set category
       });
     }
 
     return items;
-  }, [convertOdooImageToGridItem, convertUploadedFileToGridItem]);
+  }, [convertOdooImageToGridItem, convertUploadedFileToGridItem, detectShippingMarkType]);
 
   // Image copying logic - last image of each category becomes first of next
   const copyLastImages = useCallback((
@@ -480,31 +537,56 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
     };
   }, []);
 
-  // Initialize sections with image copying
+  // ✅ ENHANCED: Initialize sections with shipping mark data integration
   const initializeAllSections = useCallback((webhookImages: any, userMods: any) => {
     // First, initialize base sections without copying
     const baseItemPackSections = initializeItemPackSectionsWithData(webhookImages, userMods);
 
+    // ✅ ENHANCED: Extract shipping mark data from userMods
+    const userUploadedImages = userMods?.uploadedImages || {};
+    
+    console.log('🔍 Debug userMods structure:', {
+      hasUserMods: !!userMods,
+      hasUploadedImages: !!userUploadedImages,
+      innerCartonShippingMarks: userUploadedImages?.innerCartonShippingMarks?.length || 0,
+      masterCartonMainShippingMarks: userUploadedImages?.masterCartonMainShippingMarks?.length || 0,
+      masterCartonSideShippingMarks: userUploadedImages?.masterCartonSideShippingMarks?.length || 0,
+      allFields: Object.keys(userUploadedImages || {})
+    });
+    
     const baseDisplayItems = initializeImageSection(
       webhookImages?.displayImages, 
-      (userMods?.uploadedImages as any)?.displayImages || [], 
+      userUploadedImages?.displayImages || [], 
+      [], // No shipping marks for display
       'display', 
       'Upload display image',
-      false
+      false,
+      'displayImages'
     );
+    
+    // ✅ ENHANCED: Initialize inner carton with regular images + shipping marks
     const baseInnerCartonItems = initializeImageSection(
       webhookImages?.innerCartonImages, 
-      (userMods?.uploadedImages as any)?.innerCartonImages || [], 
+      userUploadedImages?.innerCartonImages || [], 
+      Array.isArray((userUploadedImages as any)?.innerCartonShippingMarks) ? (userUploadedImages as any).innerCartonShippingMarks : [], // ✅ NEW: Include shipping marks
       'inner-carton', 
       'Upload inner carton image',
-      false
+      false,
+      'innerCartonImages'
     );
+    
+    // ✅ ENHANCED: Initialize master carton with regular images + shipping marks
     const baseMasterCartonItems = initializeImageSection(
       webhookImages?.masterCartonImages, 
-      (userMods?.uploadedImages as any)?.masterCartonImages || [], 
+      userUploadedImages?.masterCartonImages || [], 
+      [
+        ...(Array.isArray((userUploadedImages as any)?.masterCartonMainShippingMarks) ? (userUploadedImages as any).masterCartonMainShippingMarks : []),
+        ...(Array.isArray((userUploadedImages as any)?.masterCartonSideShippingMarks) ? (userUploadedImages as any).masterCartonSideShippingMarks : [])
+      ], // ✅ NEW: Include both main and side shipping marks
       'master-carton', 
       'Upload master carton image',
-      false
+      false,
+      'masterCartonImages'
     );
 
     // Apply image copying logic
@@ -515,32 +597,63 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
       baseMasterCartonItems
     );
 
-    // Only add required shipping marks if the section doesn't already have existing images
-  
-    newInnerCartonItems.push({
-      id: `inner-shipping-mark-${Date.now()}`,
-      label: 'Shipping Mark',
-      isUploadSlot: true,
-      placeholder: 'Upload inner carton shipping mark',
-      isRequired: true,
+    // ✅ ENHANCED: Only add shipping mark upload slots if not already present
+    const hasInnerShippingMark = newInnerCartonItems.some(item => 
+      item.shippingMarkType === 'inner' && !item.isUploadSlot
+    );
+    const hasMainShippingMark = newMasterCartonItems.some(item => 
+      item.shippingMarkType === 'main' && !item.isUploadSlot
+    );
+    const hasSideShippingMark = newMasterCartonItems.some(item => 
+      item.shippingMarkType === 'side' && !item.isUploadSlot
+    );
+
+    console.log('🔍 Debug shipping mark presence:', {
+      hasInnerShippingMark,
+      hasMainShippingMark,
+      hasSideShippingMark,
+      innerCartonItemsCount: newInnerCartonItems.length,
+      masterCartonItemsCount: newMasterCartonItems.length
     });
+
+    if (!hasInnerShippingMark) {
+      newInnerCartonItems.push({
+        id: `inner-shipping-mark-${Date.now()}`,
+        label: 'Shipping Mark',
+        isUploadSlot: true,
+        placeholder: 'Upload inner carton shipping mark',
+        isRequired: true,
+        category: 'innerCartonImages',
+        shippingMarkType: 'inner',
+      });
+      console.log('➕ Added inner shipping mark upload slot');
+    }
    
-    newMasterCartonItems.push(
-      {
+    if (!hasMainShippingMark) {
+      newMasterCartonItems.push({
         id: `master-main-mark-${Date.now()}`,
         label: 'Main Shipping Mark',
         isUploadSlot: true,
         placeholder: 'Upload master carton main shipping mark',
         isRequired: true,
-      },
-      {
+        category: 'masterCartonImages',
+        shippingMarkType: 'main',
+      });
+      console.log('➕ Added main shipping mark upload slot');
+    }
+    
+    if (!hasSideShippingMark) {
+      newMasterCartonItems.push({
         id: `master-side-mark-${Date.now()}`,
         label: 'Side Shipping Mark',
         isUploadSlot: true,
         placeholder: 'Upload master carton side shipping mark',
         isRequired: true,
-      }
-    );
+        category: 'masterCartonImages',
+        shippingMarkType: 'side',
+      });
+      console.log('➕ Added side shipping mark upload slot');
+    }
 
     return {
       itemPackSections: baseItemPackSections,
@@ -556,10 +669,57 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
       const currentWebhookImages = actualAssortment?.baseAssortment?.webhookImages || (actualAssortment as any)?.pcfImages;
       const currentUserMods = freshMongoData?.userModifications || actualAssortment?.userModifications || null;
 
+      // ✅ NEW: Debug the raw API response
+      console.log('🔍 DEBUG: Raw API response structure:', {
+        actualAssortment: actualAssortment,
+        freshMongoData: freshMongoData,
+        userModsFromFresh: freshMongoData?.userModifications,
+        userModsFromActual: actualAssortment?.userModifications,
+        userModsChosen: currentUserMods,
+        uploadedImagesFromAPI: currentUserMods?.uploadedImages,
+        directShippingMarkAccess: currentUserMods?.uploadedImages?.innerCartonShippingMarks
+      });
+
+      console.log('🔍 DEBUG: Initializing sections with data:', {
+        assortmentId,
+        hasWebhookImages: !!currentWebhookImages,
+        hasUserMods: !!currentUserMods,
+        userModsKeys: currentUserMods ? Object.keys(currentUserMods) : [],
+        uploadedImagesKeys: currentUserMods?.uploadedImages ? Object.keys(currentUserMods.uploadedImages) : [],
+        uploadedImagesRaw: currentUserMods?.uploadedImages, // ✅ NEW: See the raw object
+        innerCartonShippingMarksRaw: (currentUserMods?.uploadedImages as any)?.innerCartonShippingMarks, // ✅ NEW: Direct access
+        innerCartonShippingMarks: Array.isArray((currentUserMods?.uploadedImages as any)?.innerCartonShippingMarks) ? (currentUserMods.uploadedImages as any).innerCartonShippingMarks.length : 0,
+        masterCartonMainShippingMarks: Array.isArray((currentUserMods?.uploadedImages as any)?.masterCartonMainShippingMarks) ? (currentUserMods.uploadedImages as any).masterCartonMainShippingMarks.length : 0,
+        masterCartonSideShippingMarks: Array.isArray((currentUserMods?.uploadedImages as any)?.masterCartonSideShippingMarks) ? (currentUserMods.uploadedImages as any).masterCartonSideShippingMarks.length : 0,
+      });
+
       const { itemPackSections, displayItems, innerCartonItems, masterCartonItems } = initializeAllSections(
         currentWebhookImages,
         currentUserMods
       );
+
+      console.log('🔍 DEBUG: Section initialization results:', {
+        innerCartonItemsCount: innerCartonItems.length,
+        masterCartonItemsCount: masterCartonItems.length,
+        innerCartonItems: innerCartonItems.map(item => ({
+          id: item.id,
+          label: item.label,
+          isUploadSlot: item.isUploadSlot,
+          shippingMarkType: item.shippingMarkType,
+          hasPcfImage: !!item.pcfImage,
+          hasFile: !!item.file,
+          base64Data: item.base64Data?.substring(0, 50) + '...' // Truncate for readability
+        })),
+        masterCartonItems: masterCartonItems.map(item => ({
+          id: item.id,
+          label: item.label,
+          isUploadSlot: item.isUploadSlot,
+          shippingMarkType: item.shippingMarkType,
+          hasPcfImage: !!item.pcfImage,
+          hasFile: !!item.file,
+          base64Data: item.base64Data?.substring(0, 50) + '...'
+        }))
+      });
 
       setItemPackSections(itemPackSections);
       setDisplayItems(displayItems);
@@ -570,9 +730,11 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
       const barcodeItems = initializeImageSection(
         currentWebhookImages?.itemBarcodeImages,
         (currentUserMods?.uploadedImages as any)?.itemBarcodeImages || [],
+        [], // No shipping marks for barcodes
         'barcode',
         'Upload barcode image',
-        false // Don't force upload slot if images exist
+        false, // Don't force upload slot if images exist
+        'itemBarcodeImages'
       );
       setItemBarcodeItems(barcodeItems);
     }
@@ -593,6 +755,7 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
         label: 'Upload Image',
         isUploadSlot: true,
         placeholder: 'Upload product image',
+        category: 'itemPackImages', // ✅ NEW: Set category
       }],
     };
     setItemPackSections([...itemPackSections, newSection]);
@@ -626,7 +789,7 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
   const deleteMutation = useBatchDeleteImages();
   const isSaving = uploadMutation.isPending || deleteMutation.isPending;
 
-  // FIXED: Sequential save changes logic
+  // ✅ ENHANCED: Sequential save changes logic with proper shipping mark separation
   const handleSaveChanges = async () => {
     const startTime = Date.now();
     
@@ -653,12 +816,29 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
             imageIds: [oldFilename]
           }).then(() => {
             const category = replacementData.category || 'displayImages';
-            const uploadPayload: UploadAssortmentImageDTO = {
-              _id: assortmentId,
-              isWebhookData: true,
-              [category]: [replacementData.file],
-              imageLabels: {},
-            };
+            
+            // ✅ ENHANCED: Handle shipping mark replacements with proper categorization
+            let uploadPayload: UploadAssortmentImageDTO;
+            if (replacementData.shippingMarkType) {
+              const shippingMarkLabel = `${replacementData.shippingMarkType}_shipping_mark`;
+              uploadPayload = {
+                _id: assortmentId,
+                isWebhookData: true,
+                [category]: [replacementData.file],
+                imageLabels: {
+                  [replacementData.file.name]: shippingMarkLabel
+                },
+              };
+              console.log(`🚚 Uploading replacement shipping mark: ${shippingMarkLabel} to ${category}`);
+            } else {
+              uploadPayload = {
+                _id: assortmentId,
+                isWebhookData: true,
+                [category]: [replacementData.file],
+                imageLabels: {},
+              };
+            }
+            
             return uploadMutation.mutateAsync(uploadPayload);
           });
           
@@ -666,25 +846,88 @@ export function PCFImagesPage({ assortment }: PCFImagesPageProps) {
         }
       }
 
-      // Step 3: Handle new uploads
+      // ✅ ENHANCED: Step 3: Handle new uploads with proper shipping mark field separation
       const newFiles = {
-        itemPackImages: itemPackSections.flatMap(s => 
-          s.items.filter(i => i.file && i.isUploadSlot).map(i => i.file!)
-        ),
-        itemBarcodeImages: itemBarcodeItems.filter(i => i.file && i.isUploadSlot).map(i => i.file!),
-        displayImages: displayItems.filter(i => i.file && i.isUploadSlot).map(i => i.file!),
-        innerCartonImages: innerCartonItems.filter(i => i.file && i.isUploadSlot).map(i => i.file!),
-        masterCartonImages: masterCartonItems.filter(i => i.file && i.isUploadSlot).map(i => i.file!),
+        itemPackImages: [] as File[],
+        itemBarcodeImages: [] as File[],
+        displayImages: [] as File[],
+        innerCartonImages: [] as File[], // ✅ Regular inner carton images only
+        masterCartonImages: [] as File[], // ✅ Regular master carton images only
+        // ✅ NEW: Dedicated shipping mark fields
+        innerCartonShippingMarks: [] as File[],
+        masterCartonMainShippingMarks: [] as File[],
+        masterCartonSideShippingMarks: [] as File[],
       };
+
+      const imageLabels: Record<string, string> = {};
+
+      // ✅ ENHANCED: Collect files with proper shipping mark field separation
+      const collectFilesFromSection = (items: GridImageItem[], category: string) => {
+        items.filter(i => i.file && i.isUploadSlot).forEach(item => {
+          if (item.file) {
+            // ✅ CRITICAL: Route shipping marks to dedicated fields
+            if (item.shippingMarkType) {
+              const label = `${item.shippingMarkType}_shipping_mark`;
+              imageLabels[item.file.name] = label;
+              
+              // ✅ NEW: Route to dedicated shipping mark fields
+              if (item.shippingMarkType === 'inner') {
+                newFiles.innerCartonShippingMarks.push(item.file);
+                console.log(`🚚 Adding inner shipping mark: ${item.file.name}`);
+              } else if (item.shippingMarkType === 'main') {
+                newFiles.masterCartonMainShippingMarks.push(item.file);
+                console.log(`🚚 Adding main shipping mark: ${item.file.name}`);
+              } else if (item.shippingMarkType === 'side') {
+                newFiles.masterCartonSideShippingMarks.push(item.file);
+                console.log(`🚚 Adding side shipping mark: ${item.file.name}`);
+              }
+            } else {
+              // ✅ Regular images go to their normal categories
+              const regularCategory = category as keyof typeof newFiles;
+              if (newFiles[regularCategory] && Array.isArray(newFiles[regularCategory])) {
+                (newFiles[regularCategory] as File[]).push(item.file);
+                console.log(`📤 Adding regular image: ${item.file.name} to ${category}`);
+              }
+            }
+          }
+        });
+      };
+
+      // Collect files from all sections
+      itemPackSections.forEach(section => {
+        collectFilesFromSection(section.items, 'itemPackImages');
+      });
+      collectFilesFromSection(itemBarcodeItems, 'itemBarcodeImages');
+      collectFilesFromSection(displayItems, 'displayImages');
+      collectFilesFromSection(innerCartonItems, 'innerCartonImages');
+      collectFilesFromSection(masterCartonItems, 'masterCartonImages');
 
       const hasNewUploads = Object.values(newFiles).some(arr => arr.length > 0);
       if (hasNewUploads) {
-        console.log(`📤 Uploading new files`);
+        const totalFiles = Object.values(newFiles).flat().length;
+        const shippingMarkCount = newFiles.innerCartonShippingMarks.length + 
+                                  newFiles.masterCartonMainShippingMarks.length + 
+                                  newFiles.masterCartonSideShippingMarks.length;
+        
+        console.log(`📤 Uploading ${totalFiles} files with ${shippingMarkCount} shipping marks to dedicated fields:`);
+        console.log(`🚚 Shipping mark breakdown:`, {
+          innerShippingMarks: newFiles.innerCartonShippingMarks.length,
+          mainShippingMarks: newFiles.masterCartonMainShippingMarks.length,
+          sideShippingMarks: newFiles.masterCartonSideShippingMarks.length,
+        });
+        console.log(`📦 Regular image breakdown:`, {
+          itemPack: newFiles.itemPackImages.length,
+          barcode: newFiles.itemBarcodeImages.length,
+          display: newFiles.displayImages.length,
+          innerCarton: newFiles.innerCartonImages.length,
+          masterCarton: newFiles.masterCartonImages.length,
+        });
+        
         const uploadPayload: UploadAssortmentImageDTO = {
           _id: assortmentId,
           isWebhookData: true,
-          ...newFiles,
-          imageLabels: {},
+          ...newFiles, // ✅ Now includes dedicated shipping mark fields
+          imageLabels, // ✅ Keep labels for backward compatibility
         };
         operations.push(uploadMutation.mutateAsync(uploadPayload));
       }

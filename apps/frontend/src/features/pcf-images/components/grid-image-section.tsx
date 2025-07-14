@@ -21,6 +21,9 @@ interface GridImageItem {
   // Staging flags
   isMarkedForDeletion?: boolean;
   replacementFile?: File;
+  // ✅ ENHANCED: Add shipping mark and category support
+  shippingMarkType?: 'inner' | 'main' | 'side';
+  category?: string;
 }
 
 interface GridImageSectionProps {
@@ -339,9 +342,32 @@ export function GridImageSection({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
+  // ✅ FIXED: Preserve shipping mark type and category when file is added + trigger dirty state
   const handleFileChange = (index: number, file?: File) => {
     const newItems = [...items];
-    newItems[index] = { ...newItems[index], file };
+    const currentItem = newItems[index];
+    
+    // ✅ CRITICAL FIX: Preserve all original properties, especially shippingMarkType and category
+    newItems[index] = { 
+      ...currentItem, 
+      file,
+      // ✅ IMPORTANT: Keep the upload slot properties when file is added
+      isUploadSlot: !!file, // ✅ FIXED: Keep as upload slot if file exists (triggers dirty state)
+    };
+    
+    // ✅ DEBUG: Log to verify shipping mark data is preserved
+    if (currentItem.shippingMarkType || currentItem.category) {
+      console.log(`🚚 File added to shipping mark slot:`, {
+        fileName: file?.name,
+        shippingMarkType: currentItem.shippingMarkType,
+        category: currentItem.category,
+        preserved: {
+          shippingMarkType: newItems[index].shippingMarkType,
+          category: newItems[index].category,
+        }
+      });
+    }
+    
     onItemsChange(newItems);
   };
 
@@ -351,14 +377,21 @@ export function GridImageSection({
     onItemsChange(newItems);
   };
 
+  // ✅ ENHANCED: Add new slot with proper category detection
   const handleAddNewSlot = (files: File[]) => {
     if (files.length > 0) {
+      // ✅ NEW: Try to detect category from existing items in this section
+      const sectionCategory = items.find(item => item.category)?.category || 'displayImages';
+      
       const newItem: GridImageItem = {
         id: `upload-${Date.now()}`,
         label: '',
         isUploadSlot: false,
         file: files[0],
+        category: sectionCategory, // ✅ NEW: Set category for new items
       };
+      
+      console.log(`📤 Adding new item with category: ${sectionCategory}`);
       onItemsChange([...items, newItem]);
     }
   };

@@ -73,7 +73,10 @@ export class WebhookService {
         itemBarcodeImages: [],
         displayImages: [],
         innerCartonImages: [],
-        masterCartonImages: []
+        masterCartonImages: [],
+        innerCartonShippingMarks: [],
+        masterCartonMainShippingMarks: [],
+        masterCartonSideShippingMarks: []
       };
 
       // Merge uploaded images by category
@@ -97,6 +100,18 @@ export class WebhookService {
         masterCartonImages: [
           ...(existingUploadedImages.masterCartonImages || []),
           ...(processedImages.masterCartonImages || [])
+        ],
+        innerCartonShippingMarks: [
+          ...(existingUploadedImages.innerCartonShippingMarks || []),
+          ...(processedImages.innerCartonShippingMarks || [])
+        ],
+        masterCartonMainShippingMarks: [
+          ...(existingUploadedImages.masterCartonMainShippingMarks || []),
+          ...(processedImages.masterCartonMainShippingMarks || [])
+        ],
+        masterCartonSideShippingMarks: [
+          ...(existingUploadedImages.masterCartonSideShippingMarks || []),
+          ...(processedImages.masterCartonSideShippingMarks || [])
         ]
       };
 
@@ -245,7 +260,10 @@ export class WebhookService {
               itemBarcodeImages: [],
               displayImages: [],
               innerCartonImages: [],
-              masterCartonImages: []
+              masterCartonImages: [],
+              innerCartonShippingMarks: [],
+              masterCartonMainShippingMarks: [],
+              masterCartonSideShippingMarks: [],
             },
             imageLabels: {},
             lastModified: null
@@ -684,7 +702,16 @@ export class WebhookService {
         if (!userMods?.uploadedImages) continue;
 
         // Search through all image categories
-        const categories = ['itemPackImages', 'itemBarcodeImages', 'displayImages', 'innerCartonImages', 'masterCartonImages'];
+        const categories = [
+          'itemPackImages', 
+          'itemBarcodeImages', 
+          'displayImages', 
+          'innerCartonImages', 
+          'masterCartonImages',
+          'innerCartonShippingMarks',
+          'masterCartonMainShippingMarks', 
+          'masterCartonSideShippingMarks'
+        ];
         
         for (const category of categories) {
           const images = userMods.uploadedImages[category] || [];
