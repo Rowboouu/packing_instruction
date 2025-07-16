@@ -21,11 +21,17 @@ export const PreviewPDFContainer = React.forwardRef<
   const extractedData = React.useMemo(() => {
     // Check if we have the new transformed data structure passed as pcfImages
     const pcfImages = (assortment as any)?.pcfImages;
-    
-    if (pcfImages && typeof pcfImages === 'object' && !Array.isArray(pcfImages) && 
-        ('finalProductImages' in pcfImages || 'barcodeImages' in pcfImages || 'shippingMarks' in pcfImages)) {
+
+    if (
+      pcfImages &&
+      typeof pcfImages === 'object' &&
+      !Array.isArray(pcfImages) &&
+      ('finalProductImages' in pcfImages ||
+        'barcodeImages' in pcfImages ||
+        'shippingMarks' in pcfImages)
+    ) {
       console.log('🔍 Using new transformed data structure from props');
-      
+
       return {
         finalProductImages: pcfImages.finalProductImages || [],
         howToPackSingleProduct: pcfImages.howToPackSingleProduct || [],
@@ -33,25 +39,25 @@ export const PreviewPDFContainer = React.forwardRef<
         displayImages: pcfImages.displayImages || [],
         innerCartonImages: pcfImages.innerCartonImages || [],
         masterCartonImages: pcfImages.masterCartonImages || [],
-        innerCartonPackMark: pcfImages.innerCartonPackMark || null,
-        mainShippingMark: pcfImages.mainShippingMark || null,
-        sideShippingMark: pcfImages.sideShippingMark || null,
+        innerCartonPackMark: pcfImages.innerCartonPackMark || [],
+        mainShippingMark: pcfImages.mainShippingMark || [],
+        sideShippingMark: pcfImages.sideShippingMark || [],
         innerCartonDimensions: pcfImages.innerCartonPacking?.dimensions || {
           length: assortment.baseAssortment?.inner_carton_length_cm || 0,
           width: assortment.baseAssortment?.inner_carton_width_cm || 0,
-          height: assortment.baseAssortment?.inner_carton_height_cm || 0
+          height: assortment.baseAssortment?.inner_carton_height_cm || 0,
         },
         masterCartonDimensions: pcfImages.masterCartonPack?.dimensions || {
           length: assortment.baseAssortment?.master_carton_length_cm || 0,
           width: assortment.baseAssortment?.master_carton_width_cm || 0,
-          height: assortment.baseAssortment?.master_carton_height_cm || 0
-        }
+          height: assortment.baseAssortment?.master_carton_height_cm || 0,
+        },
       };
     }
 
     // ✅ STANDARD: Extract from AssortmentData structure
     console.log('🔍 Using standard AssortmentData structure');
-    
+
     const webhookImages = assortment.baseAssortment?.webhookImages;
     const userMods = assortment.userModifications;
     const mergedData = assortment.mergedData;
@@ -71,13 +77,13 @@ export const PreviewPDFContainer = React.forwardRef<
         innerCartonDimensions: {
           length: assortment.baseAssortment?.inner_carton_length_cm || 0,
           width: assortment.baseAssortment?.inner_carton_width_cm || 0,
-          height: assortment.baseAssortment?.inner_carton_height_cm || 0
+          height: assortment.baseAssortment?.inner_carton_height_cm || 0,
         },
         masterCartonDimensions: {
           length: assortment.baseAssortment?.master_carton_length_cm || 0,
           width: assortment.baseAssortment?.master_carton_width_cm || 0,
-          height: assortment.baseAssortment?.master_carton_height_cm || 0
-        }
+          height: assortment.baseAssortment?.master_carton_height_cm || 0,
+        },
       };
     }
 
@@ -85,57 +91,69 @@ export const PreviewPDFContainer = React.forwardRef<
     const allImages = mergedData?.allImages || {
       itemPackImages: [
         ...(webhookImages?.itemPackImages?.flat() || []),
-        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.itemPackImages) : [])
+        ...(userMods?.uploadedImages
+          ? Object.values(userMods.uploadedImages.itemPackImages || [])
+          : []),
       ],
       itemBarcodeImages: [
         ...(webhookImages?.itemBarcodeImages || []),
-        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.itemBarcodeImages) : [])
+        ...(userMods?.uploadedImages
+          ? Object.values(userMods.uploadedImages.itemBarcodeImages || [])
+          : []),
       ],
       displayImages: [
         ...(webhookImages?.displayImages || []),
-        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.displayImages) : [])
+        ...(userMods?.uploadedImages
+          ? Object.values(userMods.uploadedImages.displayImages || [])
+          : []),
       ],
       innerCartonImages: [
         ...(webhookImages?.innerCartonImages || []),
-        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.innerCartonImages) : [])
+        ...(userMods?.uploadedImages
+          ? Object.values(userMods.uploadedImages.innerCartonImages || [])
+          : []),
       ],
       masterCartonImages: [
         ...(webhookImages?.masterCartonImages || []),
-        ...(userMods?.uploadedImages ? Object.values(userMods.uploadedImages).flatMap(comp => comp.masterCartonImages) : [])
-      ]
+        ...(userMods?.uploadedImages
+          ? Object.values(userMods.uploadedImages.masterCartonImages || [])
+          : []),
+      ],
+      masterCartonMainShippingMarks: [
+        ...(userMods?.uploadedImages
+          ? Object.values(
+              userMods.uploadedImages.masterCartonMainShippingMarks || [],
+            )
+          : []),
+      ],
+      innerCartonShippingMarks: [
+        ...(userMods?.uploadedImages
+          ? Object.values(
+              userMods.uploadedImages.innerCartonShippingMarks || [],
+            )
+          : []),
+      ],
+      masterCartonSideShippingMarks: [
+        ...(userMods?.uploadedImages
+          ? Object.values(
+              userMods.uploadedImages.masterCartonSideShippingMarks || [],
+            )
+          : []),
+      ],
     };
 
     // Create final product images (last from each itemPack array)
-    const finalProductImages = webhookImages?.itemPackImages?.map((packArray: any[]) => 
-      packArray[packArray.length - 1]
-    ).filter(Boolean) || [];
+    const finalProductImages =
+      webhookImages?.itemPackImages
+        ?.map((packArray: any[]) => packArray[packArray.length - 1])
+        .filter(Boolean) || [];
 
     // Create how to pack sequences
-    const howToPackSingleProduct = webhookImages?.itemPackImages?.map((packArray: any[], index: number) => ({
-      rowIndex: index,
-      images: packArray
-    })) || [];
-
-    // Find shipping marks from user uploads
-    const findShippingMark = (type: 'inner' | 'main' | 'side') => {
-      if (!userMods?.uploadedImages) return null;
-      
-      for (const comp of Object.values(userMods.uploadedImages)) {
-        const images = type === 'inner' ? comp.innerCartonImages : comp.masterCartonImages;
-        const found = images.find((img: any) => {
-          const name = img.originalname?.toLowerCase() || img.filename?.toLowerCase() || '';
-          if (type === 'inner') {
-            return name.includes('shipping') || name.includes('mark');
-          } else if (type === 'main') {
-            return name.includes('main') && name.includes('shipping');
-          } else {
-            return name.includes('side') && name.includes('shipping');
-          }
-        });
-        if (found) return found;
-      }
-      return null;
-    };
+    const howToPackSingleProduct =
+      webhookImages?.itemPackImages?.map((packArray: any[], index: number) => ({
+        rowIndex: index,
+        images: packArray,
+      })) || [];
 
     return {
       finalProductImages,
@@ -144,19 +162,22 @@ export const PreviewPDFContainer = React.forwardRef<
       displayImages: allImages.displayImages,
       innerCartonImages: allImages.innerCartonImages,
       masterCartonImages: allImages.masterCartonImages,
-      innerCartonPackMark: findShippingMark('inner'),
-      mainShippingMark: findShippingMark('main'),
-      sideShippingMark: findShippingMark('side'),
+      innerCartonPackMark:
+        userMods?.uploadedImages?.innerCartonShippingMarks || [],
+      mainShippingMark:
+        userMods?.uploadedImages?.masterCartonMainShippingMarks || [],
+      sideShippingMark:
+        userMods?.uploadedImages?.masterCartonSideShippingMarks || [],
       innerCartonDimensions: {
         length: assortment.baseAssortment?.inner_carton_length_cm || 0,
         width: assortment.baseAssortment?.inner_carton_width_cm || 0,
-        height: assortment.baseAssortment?.inner_carton_height_cm || 0
+        height: assortment.baseAssortment?.inner_carton_height_cm || 0,
       },
       masterCartonDimensions: {
         length: assortment.baseAssortment?.master_carton_length_cm || 0,
         width: assortment.baseAssortment?.master_carton_width_cm || 0,
-        height: assortment.baseAssortment?.master_carton_height_cm || 0
-      }
+        height: assortment.baseAssortment?.master_carton_height_cm || 0,
+      },
     };
   }, [assortment]);
 
@@ -164,35 +185,37 @@ export const PreviewPDFContainer = React.forwardRef<
   const designStats = React.useMemo(() => {
     const webhookImages = assortment.baseAssortment?.webhookImages;
     const itemPackImages = webhookImages?.itemPackImages || [];
-    
+
     if (!itemPackImages || itemPackImages.length === 0) {
       return {
         numberOfDesigns: 0,
         qtyPerDesign: 0,
-        totalQtyInner: 0
+        totalQtyInner: 0,
       };
     }
 
     const numberOfDesigns = itemPackImages.length;
-    
+
     // Find the largest array length minus 1 (since last image is the final product)
     const qtyPerDesign = Math.max(
-      ...itemPackImages.map((packArray: any[]) => Math.max(0, packArray.length - 1))
+      ...itemPackImages.map((packArray: any[]) =>
+        Math.max(0, packArray.length - 1),
+      ),
     );
-    
+
     const totalQtyInner = numberOfDesigns * qtyPerDesign;
 
     console.log('🔍 Design Stats:', {
       numberOfDesigns,
       qtyPerDesign,
       totalQtyInner,
-      itemPackArrays: itemPackImages.map((arr: any[]) => arr.length)
+      itemPackArrays: itemPackImages.map((arr: any[]) => arr.length),
     });
 
     return {
       numberOfDesigns,
       qtyPerDesign,
-      totalQtyInner
+      totalQtyInner,
     };
   }, [assortment]);
 
@@ -220,7 +243,7 @@ export const PreviewPDFContainer = React.forwardRef<
       cubicUnit: 'cuft',
       masterGrossWeight: 0,
       wtUnit: 'lbs',
-    }
+    },
   });
 
   const [isFocused, setFocused] = React.useState(false);
@@ -245,10 +268,10 @@ export const PreviewPDFContainer = React.forwardRef<
             masterCUFT: values.masterCUFT,
             cubicUnit: values.cubicUnit,
             masterGrossWeight: values.masterGrossWeight,
-            wtUnit: values.wtUnit
-          }
+            wtUnit: values.wtUnit,
+          },
         },
-        isWebhookData: true
+        isWebhookData: true,
       };
       update.mutate(updatePayload as any);
     } else {
@@ -275,7 +298,7 @@ export const PreviewPDFContainer = React.forwardRef<
       unit: formData?.unit ?? unitVal,
       masterCUFT: formData?.masterCUFT || 0,
       cubicUnit: formData?.cubicUnit ?? 'cuft',
-      masterGrossWeight: formData?.masterGrossWeight || 0, 
+      masterGrossWeight: formData?.masterGrossWeight || 0,
       wtUnit: formData?.wtUnit ?? 'lbs',
     });
   }, [assortment, form]);
@@ -301,7 +324,8 @@ export const PreviewPDFContainer = React.forwardRef<
               type="text"
               className="ml-2 border border-gray-300 px-3 py-2 rounded-md col-span-2"
               defaultValue={
-                assortment.baseAssortment?.name || 'Beer Opener Keychain with Display'
+                assortment.baseAssortment?.name ||
+                'Beer Opener Keychain with Display'
               }
             />
           </div>
@@ -318,7 +342,9 @@ export const PreviewPDFContainer = React.forwardRef<
             <input
               type="text"
               className="ml-2 border border-gray-300 px-3 py-2 col-span-2 rounded-md"
-              defaultValue={assortment.baseAssortment?.customerItemNo || 'FAR-0013'}
+              defaultValue={
+                assortment.baseAssortment?.customerItemNo || 'FAR-0013'
+              }
             />
           </div>
         </div>
@@ -330,22 +356,33 @@ export const PreviewPDFContainer = React.forwardRef<
 
         <div className="p-4 mb-6 min-h-64 flex items-center justify-center">
           {extractedData.finalProductImages.length > 0 ? (
-            extractedData.finalProductImages.map((img: any, idx: number) => {
-              if (!img) {
-                console.warn('⚠️ Skipping undefined image in finalProductImages at index:', idx);
-                return null;
-              }
-              return (
-                <div
-                  key={img._id || img.id || idx}
-                  className="mx-2 flex items-center justify-center"
-                >
-                  <PCFImageContent pcfImage={img} height={240} maxWidth={400} />
-                </div>
-              );
-            }).filter(Boolean)
+            extractedData.finalProductImages
+              .map((img: any, idx: number) => {
+                if (!img) {
+                  console.warn(
+                    '⚠️ Skipping undefined image in finalProductImages at index:',
+                    idx,
+                  );
+                  return null;
+                }
+                return (
+                  <div
+                    key={img._id || img.id || idx}
+                    className="mx-2 flex items-center justify-center"
+                  >
+                    <PCFImageContent
+                      pcfImage={img}
+                      height={240}
+                      maxWidth={400}
+                    />
+                  </div>
+                );
+              })
+              .filter(Boolean)
           ) : (
-            <div className="text-gray-500">No finish product images available</div>
+            <div className="text-gray-500">
+              No finish product images available
+            </div>
           )}
         </div>
 
@@ -376,30 +413,48 @@ export const PreviewPDFContainer = React.forwardRef<
         {/* ✅ UPDATED: Product Assembly Visualization - Uses howToPackSingleProduct */}
         <div className="p-4 mb-6">
           {extractedData.howToPackSingleProduct.length > 0 ? (
-            extractedData.howToPackSingleProduct.map((row: any, rowIdx: number) => (
-              <div key={rowIdx} className="flex items-center justify-center space-x-8 mb-4">
-                {row.images?.map((img: any, idx: number) => {
-                  if (!img) {
-                    console.warn('⚠️ Skipping undefined image in howToPackSingleProduct at row:', rowIdx, 'index:', idx);
-                    return null;
-                  }
-                  return (
-                    <React.Fragment key={img._id || img.id || idx}>
-                      {idx > 0 && (
-                        <div className="text-4xl font-bold">
-                          {idx === row.images.length - 1 ? '=' : '+'}
-                        </div>
-                      )}
-                      <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
-                        <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
-                      </div>
-                    </React.Fragment>
-                  );
-                }).filter(Boolean)}
-              </div>
-            ))
+            extractedData.howToPackSingleProduct.map(
+              (row: any, rowIdx: number) => (
+                <div
+                  key={rowIdx}
+                  className="flex items-center justify-center space-x-8 mb-4"
+                >
+                  {row.images
+                    ?.map((img: any, idx: number) => {
+                      if (!img) {
+                        console.warn(
+                          '⚠️ Skipping undefined image in howToPackSingleProduct at row:',
+                          rowIdx,
+                          'index:',
+                          idx,
+                        );
+                        return null;
+                      }
+                      return (
+                        <React.Fragment key={img._id || img.id || idx}>
+                          {idx > 0 && (
+                            <div className="text-4xl font-bold">
+                              {idx === row.images.length - 1 ? '=' : '+'}
+                            </div>
+                          )}
+                          <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
+                            <PCFImageContent
+                              pcfImage={img}
+                              height={180}
+                              maxWidth={180}
+                            />
+                          </div>
+                        </React.Fragment>
+                      );
+                    })
+                    .filter(Boolean)}
+                </div>
+              ),
+            )
           ) : (
-            <div className="text-center text-gray-500">No packing sequence images available</div>
+            <div className="text-center text-gray-500">
+              No packing sequence images available
+            </div>
           )}
         </div>
 
@@ -443,7 +498,6 @@ export const PreviewPDFContainer = React.forwardRef<
             <div className="grid grid-cols-3 mb-2 items-center">
               <span className="font-bold mr-4">QTY / DESIGN:</span>
               <input
-
                 type="text"
                 className="border border-gray-300 px-3 py-2 rounded-md col-span-2"
                 defaultValue={designStats.qtyPerDesign.toString()}
@@ -498,7 +552,9 @@ export const PreviewPDFContainer = React.forwardRef<
                 <React.Fragment key={img._id || idx}>
                   {idx > 0 && (
                     <div className="text-3xl text-center">
-                      {idx === extractedData.displayImages.length - 1 ? '=' : '+'}
+                      {idx === extractedData.displayImages.length - 1
+                        ? '='
+                        : '+'}
                     </div>
                   )}
                   <div
@@ -540,7 +596,9 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue={assortment.baseAssortment?.inner_carton_length_cm || "0"}
+                defaultValue={
+                  assortment.baseAssortment?.inner_carton_length_cm || '0'
+                }
               />
             </div>
             <div>
@@ -548,7 +606,9 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue={assortment.baseAssortment?.inner_carton_width_cm || "0"}
+                defaultValue={
+                  assortment.baseAssortment?.inner_carton_width_cm || '0'
+                }
               />
             </div>
             <div>
@@ -556,7 +616,9 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue={assortment.baseAssortment?.inner_carton_height_cm || "0"}
+                defaultValue={
+                  assortment.baseAssortment?.inner_carton_height_cm || '0'
+                }
               />
             </div>
           </div>
@@ -567,16 +629,24 @@ export const PreviewPDFContainer = React.forwardRef<
                 <React.Fragment key={img._id || idx}>
                   {idx > 0 && (
                     <div className="text-4xl">
-                      {idx === extractedData.innerCartonImages.length - 1 ? '=' : '+'}
+                      {idx === extractedData.innerCartonImages.length - 1
+                        ? '='
+                        : '+'}
                     </div>
                   )}
                   <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
-                    <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
+                    <PCFImageContent
+                      pcfImage={img}
+                      height={180}
+                      maxWidth={180}
+                    />
                   </div>
                 </React.Fragment>
               ))
             ) : (
-              <div className="text-gray-500">No inner carton images available</div>
+              <div className="text-gray-500">
+                No inner carton images available
+              </div>
             )}
           </div>
         </div>
@@ -598,14 +668,16 @@ export const PreviewPDFContainer = React.forwardRef<
           <div className="flex items-center justify-center">
             {extractedData.innerCartonPackMark ? (
               <div className="border border-gray-300 p-2">
-                <PCFImageContent 
-                  pcfImage={extractedData.innerCartonPackMark} 
-                  height={200} 
-                  maxWidth={300} 
+                <PCFImageContent
+                  pcfImage={extractedData.innerCartonPackMark}
+                  height={200}
+                  maxWidth={300}
                 />
               </div>
             ) : (
-              <div className="text-gray-500">No shipping mark image uploaded</div>
+              <div className="text-gray-500">
+                No shipping mark image uploaded
+              </div>
             )}
           </div>
         </div>
@@ -692,7 +764,9 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue={assortment.baseAssortment?.master_carton_length_cm || "0"}
+                defaultValue={
+                  assortment.baseAssortment?.master_carton_length_cm || '0'
+                }
               />
             </div>
             <div>
@@ -700,7 +774,9 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue={assortment.baseAssortment?.master_carton_width_cm || "0"}
+                defaultValue={
+                  assortment.baseAssortment?.master_carton_width_cm || '0'
+                }
               />
             </div>
             <div>
@@ -708,7 +784,9 @@ export const PreviewPDFContainer = React.forwardRef<
               <input
                 type="text"
                 className="border border-gray-300 px-3 py-2 max-w-24 rounded-md"
-                defaultValue={assortment.baseAssortment?.master_carton_height_cm || "0"}
+                defaultValue={
+                  assortment.baseAssortment?.master_carton_height_cm || '0'
+                }
               />
             </div>
           </div>
@@ -719,16 +797,24 @@ export const PreviewPDFContainer = React.forwardRef<
                 <React.Fragment key={img._id || idx}>
                   {idx > 0 && (
                     <div className="text-4xl">
-                      {idx === extractedData.masterCartonImages.length - 1 ? '=' : '+'}
+                      {idx === extractedData.masterCartonImages.length - 1
+                        ? '='
+                        : '+'}
                     </div>
                   )}
                   <div className="w-48 h-48 bg-gray-100 border border-gray-300 flex items-center justify-center">
-                    <PCFImageContent pcfImage={img} height={180} maxWidth={180} />
+                    <PCFImageContent
+                      pcfImage={img}
+                      height={180}
+                      maxWidth={180}
+                    />
                   </div>
                 </React.Fragment>
               ))
             ) : (
-              <div className="text-gray-500">No master carton images available</div>
+              <div className="text-gray-500">
+                No master carton images available
+              </div>
             )}
           </div>
         </div>
@@ -751,14 +837,16 @@ export const PreviewPDFContainer = React.forwardRef<
           <div className="flex items-center justify-center">
             {extractedData.mainShippingMark ? (
               <div className="border border-gray-300 p-2">
-                <PCFImageContent 
-                  pcfImage={extractedData.mainShippingMark} 
-                  height={250} 
-                  maxWidth={350} 
+                <PCFImageContent
+                  pcfImage={extractedData.mainShippingMark}
+                  height={250}
+                  maxWidth={350}
                 />
               </div>
-            ) : ( 
-              <div className="text-gray-500">No main shipping mark image uploaded</div>    
+            ) : (
+              <div className="text-gray-500">
+                No main shipping mark image uploaded
+              </div>
             )}
           </div>
         </div>
@@ -780,14 +868,16 @@ export const PreviewPDFContainer = React.forwardRef<
           <div className="flex items-center justify-center">
             {extractedData.sideShippingMark ? (
               <div className="border border-gray-300 p-2">
-                <PCFImageContent 
-                  pcfImage={extractedData.sideShippingMark} 
-                  height={200} 
-                  maxWidth={300} 
+                <PCFImageContent
+                  pcfImage={extractedData.sideShippingMark}
+                  height={200}
+                  maxWidth={300}
                 />
               </div>
-            ) : (     
-              <div className="text-gray-500">No side shipping mark image uploaded</div>
+            ) : (
+              <div className="text-gray-500">
+                No side shipping mark image uploaded
+              </div>
             )}
           </div>
         </div>

@@ -14,7 +14,7 @@ export interface Assortment {
   updatedAt: string;
   status: 'pending' | 'todo' | 'ongoing' | 'completed' | 'approved';
   uploadStatus: 'pending' | 'in-progress' | 'completed';
-  
+
   // Dimensions from webhook
   length_cm: number;
   width_cm: number;
@@ -25,16 +25,16 @@ export interface Assortment {
   inner_carton_length_cm: number;
   inner_carton_width_cm: number;
   inner_carton_height_cm: number;
-  
+
   // Optional legacy image (might not be used with webhook data)
   image?: FileData;
-  
+
   // User-modifiable fields (can be updated via forms)
   masterCUFT?: number;
   masterGrossWeight?: number;
   productInCarton?: number;
   productPerUnit?: number;
-  
+
   // Optional additional fields
   labels?: Record<string, { id: number; value: string; name: string }>[];
   itemInCarton?: number;
@@ -54,5 +54,8 @@ export interface AssortmentPCF extends Assortment {
     displayImages: PcfImage[] | any[];
     innerCartonImages: PcfImage[] | any[];
     masterCartonImages: PcfImage[] | any[];
+    innerCartonShippingMarks: PcfImage[] | any[]; // Optional shipping marks
+    masterCartonMainShippingMarks: PcfImage[] | any[]; // Optional main shipping marks
+    masterCartonSideShippingMarks: PcfImage[] | any[]; // Optional side shipping marks
   };
 }

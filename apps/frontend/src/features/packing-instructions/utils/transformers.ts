@@ -7,14 +7,17 @@ import { AssortmentPCF } from '@/features/assortments';
 export function calculateImageCount(pcfImages: any): number {
   if (!pcfImages) return 0;
 
-  const itemPackCount = pcfImages.itemPackImages?.reduce(
-    (acc: number, pack: any[]) => acc + pack.length, 0
-  ) || 0;
+  const itemPackCount =
+    pcfImages.itemPackImages?.reduce(
+      (acc: number, pack: any[]) => acc + pack.length,
+      0,
+    ) || 0;
 
-  const otherImagesCount = (pcfImages.itemBarcodeImages?.length || 0) +
-                           (pcfImages.displayImages?.length || 0) +
-                           (pcfImages.innerCartonImages?.length || 0) +
-                           (pcfImages.masterCartonImages?.length || 0);
+  const otherImagesCount =
+    (pcfImages.itemBarcodeImages?.length || 0) +
+    (pcfImages.displayImages?.length || 0) +
+    (pcfImages.innerCartonImages?.length || 0) +
+    (pcfImages.masterCartonImages?.length || 0);
 
   return itemPackCount + otherImagesCount;
 }
@@ -30,11 +33,20 @@ function filterDeletedImagesFromUserMods(userModifications: any): any {
     ...userModifications,
     uploadedImages: {
       itemPackImages: userModifications.uploadedImages.itemPackImages || [],
-      itemBarcodeImages: userModifications.uploadedImages.itemBarcodeImages || [],
+      itemBarcodeImages:
+        userModifications.uploadedImages.itemBarcodeImages || [],
       displayImages: userModifications.uploadedImages.displayImages || [],
-      innerCartonImages: userModifications.uploadedImages.innerCartonImages || [],
-      masterCartonImages: userModifications.uploadedImages.masterCartonImages || [],
-    }
+      innerCartonImages:
+        userModifications.uploadedImages.innerCartonImages || [],
+      masterCartonImages:
+        userModifications.uploadedImages.masterCartonImages || [],
+      innerCartonShippingMarks:
+        userModifications.uploadedImages.innerCartonShippingMarks || [],
+      masterCartonMainShippingMarks:
+        userModifications.uploadedImages.masterCartonMainShippingMarks || [],
+      masterCartonSideShippingMarks:
+        userModifications.uploadedImages.masterCartonSideShippingMarks || [],
+    },
   };
 
   // The backend should have already removed deleted images,
@@ -45,6 +57,12 @@ function filterDeletedImagesFromUserMods(userModifications: any): any {
     display: filtered.uploadedImages.displayImages?.length || 0,
     innerCarton: filtered.uploadedImages.innerCartonImages?.length || 0,
     masterCarton: filtered.uploadedImages.masterCartonImages?.length || 0,
+    innerCartonShippingMarks:
+      filtered.uploadedImages.innerCartonShippingMarks?.length || 0,
+    masterCartonMainShippingMarks:
+      filtered.uploadedImages.masterCartonMainShippingMarks?.length || 0,
+    masterCartonSideShippingMarks:
+      filtered.uploadedImages.masterCartonSideShippingMarks?.length || 0,
   });
 
   return filtered;
@@ -52,10 +70,9 @@ function filterDeletedImagesFromUserMods(userModifications: any): any {
 
 // Main transformation function for raw data to AssortmentData
 export function transformRawDataToAssortmentData(
-  rawData: any, 
-  source: 'webhook' | 'traditional'
+  rawData: any,
+  source: 'webhook' | 'traditional',
 ): AssortmentData {
-  
   // Extract actual data (handle Mongoose documents and various wrapper formats)
   let actualData = rawData;
   if (rawData._doc) {
@@ -91,7 +108,9 @@ export function transformRawDataToAssortmentData(
       innerCartonImages: [],
       masterCartonImages: [],
     },
-    sourceOrderName: actualData.orderName || (source === 'webhook' ? `INDIVIDUAL_${actualData.itemNo}` : undefined),
+    sourceOrderName:
+      actualData.orderName ||
+      (source === 'webhook' ? `INDIVIDUAL_${actualData.itemNo}` : undefined),
     salesOrder: actualData.salesOrder,
   };
 
@@ -127,6 +146,9 @@ export function transformRawDataToAssortmentData(
       displayImages: [],
       innerCartonImages: [],
       masterCartonImages: [],
+      innerCartonShippingMarks: [],
+      masterCartonMainShippingMarks: [],
+      masterCartonSideShippingMarks: [],
     },
   };
 
@@ -134,7 +156,16 @@ export function transformRawDataToAssortmentData(
   const result: AssortmentData = {
     baseAssortment,
     userModifications: {
-      uploadedImages: {},
+      uploadedImages: {
+        itemPackImages: [],
+        itemBarcodeImages: [],
+        displayImages: [],
+        innerCartonImages: [],
+        masterCartonImages: [],
+        innerCartonShippingMarks: [],
+        masterCartonMainShippingMarks: [],
+        masterCartonSideShippingMarks: [],
+      },
       imageLabels: {},
       customFields: {},
       formData: {},
@@ -147,6 +178,9 @@ export function transformRawDataToAssortmentData(
         displayImages: [],
         innerCartonImages: [],
         masterCartonImages: [],
+        innerCartonShippingMarks: [],
+        masterCartonMainShippingMarks: [],
+        masterCartonSideShippingMarks: [],
       },
       webhookImages: actualData.pcfImages || {
         itemPackImages: [],
@@ -160,16 +194,26 @@ export function transformRawDataToAssortmentData(
     },
     metadata: {
       source: source,
-      lastModified: actualData.updatedAt ? new Date(actualData.updatedAt) : new Date(),
+      lastModified: actualData.updatedAt
+        ? new Date(actualData.updatedAt)
+        : new Date(),
       version: actualData.version || actualData._version || 1,
-      syncedAt: actualData.syncedAt ? new Date(actualData.syncedAt) : new Date(),
+      syncedAt: actualData.syncedAt
+        ? new Date(actualData.syncedAt)
+        : new Date(),
       isWebhookData: source === 'webhook',
       dataSource: 'api',
       // Add optional fields that won't break existing types
-      ...(actualData._persistentStorageEnabled && { persistentStorageEnabled: actualData._persistentStorageEnabled }),
+      ...(actualData._persistentStorageEnabled && {
+        persistentStorageEnabled: actualData._persistentStorageEnabled,
+      }),
       ...(actualData._cacheKey && { cacheKey: actualData._cacheKey }),
-      ...(actualData._imageCollectionHash && { imageCollectionHash: actualData._imageCollectionHash }),
-      ...(actualData._performanceMetrics && { performanceMetrics: actualData._performanceMetrics }),
+      ...(actualData._imageCollectionHash && {
+        imageCollectionHash: actualData._imageCollectionHash,
+      }),
+      ...(actualData._performanceMetrics && {
+        performanceMetrics: actualData._performanceMetrics,
+      }),
     },
   };
 
@@ -177,7 +221,9 @@ export function transformRawDataToAssortmentData(
 }
 
 // Transform webhook data to SalesOrderData format
-export function transformWebhookToSalesOrderData(webhookData: any): SalesOrderData {
+export function transformWebhookToSalesOrderData(
+  webhookData: any,
+): SalesOrderData {
   return {
     salesOrder: {
       id: webhookData.salesOrder.id,
@@ -191,10 +237,11 @@ export function transformWebhookToSalesOrderData(webhookData: any): SalesOrderDa
       updatedAt: webhookData.processedAt || webhookData.receivedAt,
     },
     // FIX: Transform each assortment to full AssortmentData structure
-    assortments: webhookData.assortments?.map((assortmentRaw: any) => {
-      // Use the same transformation as individual assortments
-      return transformRawDataToAssortmentData(assortmentRaw, 'webhook');
-    }) || [],
+    assortments:
+      webhookData.assortments?.map((assortmentRaw: any) => {
+        // Use the same transformation as individual assortments
+        return transformRawDataToAssortmentData(assortmentRaw, 'webhook');
+      }) || [],
     metadata: {
       source: 'webhook' as const,
       totalImages: webhookData.metadata?.totalImages || 0,
@@ -204,8 +251,9 @@ export function transformWebhookToSalesOrderData(webhookData: any): SalesOrderDa
 }
 
 // FIXED: Transform individual assortment API response - PROPERLY FILTER DELETED IMAGES
-export function transformIndividualAssortmentResponse(rawData: any): AssortmentData {
-  
+export function transformIndividualAssortmentResponse(
+  rawData: any,
+): AssortmentData {
   // Extract actual data (handle Mongoose documents and various wrapper formats)
   let actualData = rawData;
   if (rawData._doc) {
@@ -277,6 +325,9 @@ export function transformIndividualAssortmentResponse(rawData: any): AssortmentD
       displayImages: [],
       innerCartonImages: [],
       masterCartonImages: [],
+      innerCartonShippingMarks: [],
+      masterCartonMainShippingMarks: [],
+      masterCartonSideShippingMarks: [],
     },
   };
 
@@ -287,16 +338,20 @@ export function transformIndividualAssortmentResponse(rawData: any): AssortmentD
       itemBarcodeImages: [],
       displayImages: [],
       innerCartonImages: [],
-      masterCartonImages: []
+      masterCartonImages: [],
+      innerCartonShippingMarks: [],
+      masterCartonMainShippingMarks: [],
+      masterCartonSideShippingMarks: [],
     },
     imageLabels: {},
     customFields: {},
     formData: {},
-    lastModified: null
+    lastModified: null,
   };
 
   // Filter out any deleted images (backend should handle this, but ensure consistency)
-  const preservedUserModifications = filterDeletedImagesFromUserMods(rawUserModifications);
+  const preservedUserModifications =
+    filterDeletedImagesFromUserMods(rawUserModifications);
 
   // Build complete AssortmentData structure
   const result: AssortmentData = {
@@ -310,6 +365,15 @@ export function transformIndividualAssortmentResponse(rawData: any): AssortmentD
         displayImages: [],
         innerCartonImages: [],
         masterCartonImages: [],
+        innerCartonShippingMarks:
+          preservedUserModifications.uploadedImages.innerCartonShippingMarks ||
+          [],
+        masterCartonMainShippingMarks:
+          preservedUserModifications.uploadedImages
+            .masterCartonMainShippingMarks || [],
+        masterCartonSideShippingMarks:
+          preservedUserModifications.uploadedImages
+            .masterCartonSideShippingMarks || [],
       },
       webhookImages: actualData.pcfImages || {
         itemPackImages: [],
@@ -323,35 +387,72 @@ export function transformIndividualAssortmentResponse(rawData: any): AssortmentD
     },
     metadata: {
       source: 'webhook',
-      lastModified: actualData.updatedAt ? new Date(actualData.updatedAt) : new Date(),
+      lastModified: actualData.updatedAt
+        ? new Date(actualData.updatedAt)
+        : new Date(),
       version: actualData.version || actualData._version || 1,
-      syncedAt: actualData.syncedAt ? new Date(actualData.syncedAt) : new Date(),
+      syncedAt: actualData.syncedAt
+        ? new Date(actualData.syncedAt)
+        : new Date(),
       isWebhookData: true,
       dataSource: 'api',
       // Add optional fields that won't break existing types
-      ...(actualData._persistentStorageEnabled && { persistentStorageEnabled: actualData._persistentStorageEnabled }),
+      ...(actualData._persistentStorageEnabled && {
+        persistentStorageEnabled: actualData._persistentStorageEnabled,
+      }),
       ...(actualData._cacheKey && { cacheKey: actualData._cacheKey }),
-      ...(actualData._imageCollectionHash && { imageCollectionHash: actualData._imageCollectionHash }),
-      ...(actualData._performanceMetrics && { performanceMetrics: actualData._performanceMetrics }),
+      ...(actualData._imageCollectionHash && {
+        imageCollectionHash: actualData._imageCollectionHash,
+      }),
+      ...(actualData._performanceMetrics && {
+        performanceMetrics: actualData._performanceMetrics,
+      }),
     },
   };
 
   // Debug log to verify user modifications are preserved and filtered
   if (preservedUserModifications.uploadedImages) {
     const uploadCounts = {
-      itemPack: preservedUserModifications.uploadedImages.itemPackImages?.length || 0,
-      barcode: preservedUserModifications.uploadedImages.itemBarcodeImages?.length || 0,
-      display: preservedUserModifications.uploadedImages.displayImages?.length || 0,
-      innerCarton: preservedUserModifications.uploadedImages.innerCartonImages?.length || 0,
-      masterCarton: preservedUserModifications.uploadedImages.masterCartonImages?.length || 0
+      itemPack:
+        preservedUserModifications.uploadedImages.itemPackImages?.length || 0,
+      barcode:
+        preservedUserModifications.uploadedImages.itemBarcodeImages?.length ||
+        0,
+      display:
+        preservedUserModifications.uploadedImages.displayImages?.length || 0,
+      innerCarton:
+        preservedUserModifications.uploadedImages.innerCartonImages?.length ||
+        0,
+      masterCarton:
+        preservedUserModifications.uploadedImages.masterCartonImages?.length ||
+        0,
+      innerCartonShippingMarks:
+        preservedUserModifications.uploadedImages.innerCartonShippingMarks
+          ?.length || 0,
+      masterCartonMainShippingMarks:
+        preservedUserModifications.uploadedImages.masterCartonMainShippingMarks
+          ?.length || 0,
+      masterCartonSideShippingMarks:
+        preservedUserModifications.uploadedImages.masterCartonSideShippingMarks
+          ?.length || 0,
     };
-    
-    console.log('🔄 Transformer: Final user modifications after delete filtering:', uploadCounts);
-    
+
+    console.log(
+      '🔄 Transformer: Final user modifications after delete filtering:',
+      uploadCounts,
+    );
+
     // Alert if we still have images after supposed deletion
-    const totalImages = Object.values(uploadCounts).reduce((sum, count) => sum + count, 0);
+    const totalImages = Object.values(uploadCounts).reduce(
+      (sum, count) => sum + count,
+      0,
+    );
     if (totalImages > 0) {
-      console.log('✅ Transformer: Preserved', totalImages, 'user uploaded images');
+      console.log(
+        '✅ Transformer: Preserved',
+        totalImages,
+        'user uploaded images',
+      );
     } else {
       console.log('🗑️ Transformer: No user uploaded images remaining');
     }
@@ -360,8 +461,10 @@ export function transformIndividualAssortmentResponse(rawData: any): AssortmentD
   return result;
 }
 
-// Transform traditional assortment API response  
-export function transformTraditionalAssortmentResponse(rawData: any): AssortmentData {
+// Transform traditional assortment API response
+export function transformTraditionalAssortmentResponse(
+  rawData: any,
+): AssortmentData {
   return transformRawDataToAssortmentData(rawData, 'traditional');
 }
 
@@ -370,14 +473,17 @@ export function countAssortmentImages(assortment: any): number {
   const pcfImages = assortment.pcfImages;
   if (!pcfImages) return 0;
 
-  const itemPackCount = pcfImages.itemPackImages?.reduce(
-    (acc: number, pack: any[]) => acc + pack.length, 0
-  ) || 0;
-  
-  const otherImagesCount = (pcfImages.itemBarcodeImages?.length || 0) +
-                           (pcfImages.displayImages?.length || 0) +
-                           (pcfImages.innerCartonImages?.length || 0) +
-                           (pcfImages.masterCartonImages?.length || 0);
+  const itemPackCount =
+    pcfImages.itemPackImages?.reduce(
+      (acc: number, pack: any[]) => acc + pack.length,
+      0,
+    ) || 0;
+
+  const otherImagesCount =
+    (pcfImages.itemBarcodeImages?.length || 0) +
+    (pcfImages.displayImages?.length || 0) +
+    (pcfImages.innerCartonImages?.length || 0) +
+    (pcfImages.masterCartonImages?.length || 0);
 
   return itemPackCount + otherImagesCount;
 }
@@ -393,5 +499,7 @@ export function validateAssortmentData(data: AssortmentData): boolean {
 }
 
 export function isWebhookData(data: AssortmentData): boolean {
-  return data.metadata?.source === 'webhook' || data.metadata?.isWebhookData === true;
+  return (
+    data.metadata?.source === 'webhook' || data.metadata?.isWebhookData === true
+  );
 }

@@ -45,7 +45,7 @@ interface GridImageSectionProps {
     fromSectionId: string,
     toSectionId: string,
     item: GridImageItem,
-    targetIndex: number
+    targetIndex: number,
   ) => void;
   acceptCrossSectionTransfers?: boolean;
 }
@@ -150,7 +150,7 @@ function GridImageCard({
         item,
         sourceIndex: index,
         sourceSectionId: sectionId,
-      })
+      }),
     );
     onDragStart(index, item);
   };
@@ -192,8 +192,8 @@ function GridImageCard({
       <Card
         style={{ height: '200px', width: '220px' }}
         className={`border-2 border-dashed transition-all duration-200 hover:scale-105 ${
-          item.isRequired 
-            ? 'border-red-300 hover:border-red-400 bg-red-50 hover:bg-red-100' 
+          item.isRequired
+            ? 'border-red-300 hover:border-red-400 bg-red-50 hover:bg-red-100'
             : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
         } cursor-pointer ${
           isDragging ? 'opacity-50 scale-95' : 'opacity-100'
@@ -212,9 +212,11 @@ function GridImageCard({
           ) : (
             <Icons.Plus height={24} width={24} className="text-gray-400 mb-2" />
           )}
-          <span className={`text-sm text-center px-2 ${
-            item.isRequired ? 'text-red-600 font-medium' : 'text-gray-500'
-          }`}>
+          <span
+            className={`text-sm text-center px-2 ${
+              item.isRequired ? 'text-red-600 font-medium' : 'text-gray-500'
+            }`}
+          >
             {item.placeholder || t('keyText_newImage')}
           </span>
         </div>
@@ -252,7 +254,7 @@ function GridImageCard({
               </div>
             </div>
           )}
-          
+
           {/* ✅ FIXED: Render replacement file preview or original */}
           {item.replacementFile ? (
             // Show preview of replacement file
@@ -346,15 +348,15 @@ export function GridImageSection({
   const handleFileChange = (index: number, file?: File) => {
     const newItems = [...items];
     const currentItem = newItems[index];
-    
+
     // ✅ CRITICAL FIX: Preserve all original properties, especially shippingMarkType and category
-    newItems[index] = { 
-      ...currentItem, 
+    newItems[index] = {
+      ...currentItem,
       file,
       // ✅ IMPORTANT: Keep the upload slot properties when file is added
       isUploadSlot: !!file, // ✅ FIXED: Keep as upload slot if file exists (triggers dirty state)
     };
-    
+
     // ✅ DEBUG: Log to verify shipping mark data is preserved
     if (currentItem.shippingMarkType || currentItem.category) {
       console.log(`🚚 File added to shipping mark slot:`, {
@@ -364,10 +366,10 @@ export function GridImageSection({
         preserved: {
           shippingMarkType: newItems[index].shippingMarkType,
           category: newItems[index].category,
-        }
+        },
       });
     }
-    
+
     onItemsChange(newItems);
   };
 
@@ -381,8 +383,9 @@ export function GridImageSection({
   const handleAddNewSlot = (files: File[]) => {
     if (files.length > 0) {
       // ✅ NEW: Try to detect category from existing items in this section
-      const sectionCategory = items.find(item => item.category)?.category || 'displayImages';
-      
+      const sectionCategory =
+        items.find((item) => item.category)?.category || 'displayImages';
+
       const newItem: GridImageItem = {
         id: `upload-${Date.now()}`,
         label: '',
@@ -390,7 +393,7 @@ export function GridImageSection({
         file: files[0],
         category: sectionCategory, // ✅ NEW: Set category for new items
       };
-      
+
       console.log(`📤 Adding new item with category: ${sectionCategory}`);
       onItemsChange([...items, newItem]);
     }
@@ -410,7 +413,7 @@ export function GridImageSection({
     try {
       const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
       const { item: droppedItem, sourceSectionId } = dragData;
-      
+
       if (
         sourceSectionId &&
         sourceSectionId !== sectionId &&
@@ -421,11 +424,11 @@ export function GridImageSection({
           sourceSectionId,
           sectionId!,
           droppedItem,
-          targetIndex
+          targetIndex,
         );
         return;
       }
-      
+
       if (draggedIndex !== null && draggedIndex !== targetIndex) {
         const newItems = [...items];
         const draggedItem = newItems[draggedIndex];

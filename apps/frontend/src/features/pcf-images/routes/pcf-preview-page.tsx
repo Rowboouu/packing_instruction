@@ -2,7 +2,11 @@ import { Icons } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { PreviewPDFContainer, ReportButton } from '..';
-import { useUpdateAssortment, useGetWebhookAssortment, AssortmentData } from '@/features/packing-instructions';
+import {
+  useUpdateAssortment,
+  useGetWebhookAssortment,
+  AssortmentData,
+} from '@/features/packing-instructions';
 
 // ✅ UPDATED: Interface using only packing-instructions types
 export interface PCFPreviewPageProps {
@@ -29,38 +33,43 @@ export function PCFPreviewPage({
 }: PCFPreviewPageProps) {
   const { t } = useTranslation();
   const { mutate, isPending: isMutatePending } = useUpdateAssortment();
-  
+
   // ✅ FLEXIBLE: Use passed props OR fetch data (backward compatibility)
-  const fallbackAssortmentItemNo = 
-    (assortment as any)?.itemNo || 
-    (assortment as any)?.baseAssortment?.itemNo || 
-    (assortment as any)?._id || '';
-    
+  const fallbackAssortmentItemNo =
+    (assortment as any)?.itemNo ||
+    (assortment as any)?.baseAssortment?.itemNo ||
+    (assortment as any)?._id ||
+    '';
+
   const { data: freshWebhookData } = useGetWebhookAssortment(
     fallbackAssortmentItemNo,
-    { 
+    {
       enabled: !webhookImages && !!fallbackAssortmentItemNo, // Only fetch if not provided as props
-      staleTime: 0, 
-      gcTime: 0, 
-      refetchOnMount: true, 
-      refetchOnWindowFocus: false 
-    }
+      staleTime: 0,
+      gcTime: 0,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    },
   );
 
   // ✅ SMART: Use provided props or fallback to fetched/existing data
   const actualAssortment = freshWebhookData || assortment;
-  const actualAssortmentId = assortmentId || 
-    (actualAssortment as any)?.baseAssortment?.itemNo || 
-    (actualAssortment as any)?.itemNo || 
-    (actualAssortment as any)?._id || '';
+  const actualAssortmentId =
+    assortmentId ||
+    (actualAssortment as any)?.baseAssortment?.itemNo ||
+    (actualAssortment as any)?.itemNo ||
+    (actualAssortment as any)?._id ||
+    '';
 
-  const actualWebhookImages = webhookImages || 
-    (actualAssortment as any)?.baseAssortment?.webhookImages || 
+  const actualWebhookImages =
+    webhookImages ||
+    (actualAssortment as any)?.baseAssortment?.webhookImages ||
     (actualAssortment as any)?.pcfImages;
 
-  const actualUserMods = userModifications || 
-    (freshWebhookData as any)?.userModifications || 
-    (actualAssortment as any)?.userModifications || 
+  const actualUserMods =
+    userModifications ||
+    (freshWebhookData as any)?.userModifications ||
+    (actualAssortment as any)?.userModifications ||
     null;
 
   console.log('🔍 PCF Preview - Using data:', {
@@ -68,7 +77,7 @@ export function PCFPreviewPage({
     webhookImages: actualWebhookImages,
     userMods: actualUserMods,
     imageStats,
-    assortmentId: actualAssortmentId
+    assortmentId: actualAssortmentId,
   });
 
   const handleApprovedClick = () => {
@@ -78,13 +87,16 @@ export function PCFPreviewPage({
         _id: actualAssortmentId,
         userModifications: {
           formData: {
-            status: 'approved'
-          }
+            status: 'approved',
+          },
         },
-        isWebhookData: true
+        isWebhookData: true,
       };
       mutate(updatePayload as any);
-      console.log('Approval process initiated for assortment:', actualAssortmentId);
+      console.log(
+        'Approval process initiated for assortment:',
+        actualAssortmentId,
+      );
     } catch (error) {
       console.error('Error updating assortment status:', error);
     }
@@ -98,19 +110,38 @@ export function PCFPreviewPage({
     }
 
     console.log('🔍 Calculating imageStats from data...');
-    
+
     if (!actualWebhookImages && !actualUserMods?.uploadedImages) {
-      return { 
-        total: 0, 
-        sections: 0, 
+      return {
+        total: 0,
+        sections: 0,
         itemPackSections: 0,
-        webhookCounts: { itemPack: 0, barcode: 0, display: 0, inner: 0, master: 0 },
-        userCounts: { itemPack: 0, barcode: 0, display: 0, inner: 0, master: 0 }
+        webhookCounts: {
+          itemPack: 0,
+          barcode: 0,
+          display: 0,
+          inner: 0,
+          master: 0,
+        },
+        userCounts: {
+          itemPack: 0,
+          barcode: 0,
+          display: 0,
+          inner: 0,
+          master: 0,
+          innerMark: 0,
+          mainMark: 0,
+          sideMark: 0,
+        },
       };
     }
 
     const webhookCounts = {
-      itemPack: actualWebhookImages?.itemPackImages?.reduce((acc: number, packArray: any[]) => acc + packArray.length, 0) || 0,
+      itemPack:
+        actualWebhookImages?.itemPackImages?.reduce(
+          (acc: number, packArray: any[]) => acc + packArray.length,
+          0,
+        ) || 0,
       barcode: actualWebhookImages?.itemBarcodeImages?.length || 0,
       display: actualWebhookImages?.displayImages?.length || 0,
       inner: actualWebhookImages?.innerCartonImages?.length || 0,
@@ -123,23 +154,33 @@ export function PCFPreviewPage({
       display: actualUserMods?.uploadedImages?.displayImages?.length || 0,
       inner: actualUserMods?.uploadedImages?.innerCartonImages?.length || 0,
       master: actualUserMods?.uploadedImages?.masterCartonImages?.length || 0,
+      innerMark:
+        actualUserMods?.uploadedImages?.innerCartonShippingMarks?.length || 0,
+      mainMark:
+        actualUserMods?.uploadedImages?.masterCartonMainShippingMarks?.length ||
+        0,
+      sideMark:
+        actualUserMods?.uploadedImages?.masterCartonSideShippingMarks?.length ||
+        0,
     };
-    
-    const total = Object.values(webhookCounts).reduce((a, b) => a + b, 0) + 
-                  Object.values(userCounts).reduce((a, b) => a + b, 0);
-    
-    const sections = (actualWebhookImages?.itemPackImages?.length || 0) + 
-      ((webhookCounts.barcode + userCounts.barcode) > 0 ? 1 : 0) + 
-      ((webhookCounts.display + userCounts.display) > 0 ? 1 : 0) + 
-      ((webhookCounts.inner + userCounts.inner) > 0 ? 1 : 0) + 
-      ((webhookCounts.master + userCounts.master) > 0 ? 1 : 0);
 
-    return { 
-      total, 
-      sections, 
+    const total =
+      Object.values(webhookCounts).reduce((a, b) => a + b, 0) +
+      Object.values(userCounts).reduce((a, b) => a + b, 0);
+
+    const sections =
+      (actualWebhookImages?.itemPackImages?.length || 0) +
+      (webhookCounts.barcode + userCounts.barcode > 0 ? 1 : 0) +
+      (webhookCounts.display + userCounts.display > 0 ? 1 : 0) +
+      (webhookCounts.inner + userCounts.inner > 0 ? 1 : 0) +
+      (webhookCounts.master + userCounts.master > 0 ? 1 : 0);
+
+    return {
+      total,
+      sections,
       itemPackSections: actualWebhookImages?.itemPackImages?.length || 0,
       webhookCounts,
-      userCounts
+      userCounts,
     };
   };
 
@@ -148,44 +189,55 @@ export function PCFPreviewPage({
   // ✅ TRANSFORM: Create data structure for PreviewPDFContainer
   const transformToAssortmentData = (): AssortmentData => {
     console.log('🔍 Preview Transform - Starting transformation...');
-    
+
     if (!actualWebhookImages && !actualUserMods?.uploadedImages) {
       console.log('❌ Preview Transform - No data to transform');
       return {
         ...actualAssortment,
-        pcfImages: []
+        pcfImages: [],
       } as unknown as AssortmentData;
     }
 
     const previewData = {
       // ✅ Final Product Images: Last image from each itemPack array
-      finalProductImages: actualWebhookImages?.itemPackImages?.map((packArray: any[]) => {
-        console.log('🔍 Processing pack array for final product:', packArray);
-        return packArray[packArray.length - 1];
-      }).filter(Boolean) || [],
+      finalProductImages:
+        actualWebhookImages?.itemPackImages
+          ?.map((packArray: any[]) => {
+            console.log(
+              '🔍 Processing pack array for final product:',
+              packArray,
+            );
+            return packArray[packArray.length - 1];
+          })
+          .filter(Boolean) || [],
 
       // ✅ How to Pack Single Product: ItemPack arrays with '+' and '=' formatting
-      howToPackSingleProduct: actualWebhookImages?.itemPackImages?.map((packArray: any[], index: number) => ({
-        rowIndex: index,
-        images: packArray,
-        // Format: img1 + img2 + img3 = final
-        displayFormat: packArray.map((img: any, i: number) => ({
-          image: img,
-          separator: i === packArray.length - 1 ? '=' : '+',
-          isLast: i === packArray.length - 1
-        }))
-      })) || [],
+      howToPackSingleProduct:
+        actualWebhookImages?.itemPackImages?.map(
+          (packArray: any[], index: number) => ({
+            rowIndex: index,
+            images: packArray,
+            // Format: img1 + img2 + img3 = final
+            displayFormat: packArray.map((img: any, i: number) => ({
+              image: img,
+              separator: i === packArray.length - 1 ? '=' : '+',
+              isLast: i === packArray.length - 1,
+            })),
+          }),
+        ) || [],
 
       // ✅ Barcode Images: Direct from webhook + user uploads
       barcodeImages: [
         ...(actualWebhookImages?.itemBarcodeImages || []),
-        ...(actualUserMods?.uploadedImages?.itemBarcodeImages?.map((file: any) => ({
-          id: Math.random(),
-          componentName: file.originalname,
-          image: `/webhook/pcf-images/${file.filename}`,
-          filename: file.filename,
-          isUserUpload: true
-        })) || [])
+        ...(actualUserMods?.uploadedImages?.itemBarcodeImages?.map(
+          (file: any) => ({
+            id: Math.random(),
+            componentName: file.originalname,
+            image: `/webhook/pcf-images/${file.filename}`,
+            filename: file.filename,
+            isUserUpload: true,
+          }),
+        ) || []),
       ],
 
       // ✅ Display Images: Direct from webhook + user uploads
@@ -196,186 +248,180 @@ export function PCFPreviewPage({
           componentName: file.originalname,
           image: `/webhook/pcf-images/${file.filename}`,
           filename: file.filename,
-          isUserUpload: true
-        })) || [])
+          isUserUpload: true,
+        })) || []),
       ],
 
       // ✅ Display Packing: DisplayImages with '+' and '=' formatting
       displayPacking: {
         images: [
           ...(actualWebhookImages?.displayImages || []),
-          ...(actualUserMods?.uploadedImages?.displayImages?.map((file: any) => ({
-            id: Math.random(),
-            componentName: file.originalname,
-            image: `/webhook/pcf-images/${file.filename}`,
-            filename: file.filename,
-            isUserUpload: true
-          })) || [])
+          ...(actualUserMods?.uploadedImages?.displayImages?.map(
+            (file: any) => ({
+              id: Math.random(),
+              componentName: file.originalname,
+              image: `/webhook/pcf-images/${file.filename}`,
+              filename: file.filename,
+              isUserUpload: true,
+            }),
+          ) || []),
         ],
-        displayFormat: function() {
+        displayFormat: function () {
           return this.images.map((img, i) => ({
             image: img,
             separator: i === this.images.length - 1 ? '=' : '+',
-            isLast: i === this.images.length - 1
+            isLast: i === this.images.length - 1,
           }));
-        }
+        },
       },
 
       // ✅ Inner Carton Images: Direct from webhook + user uploads
       innerCartonImages: [
         ...(actualWebhookImages?.innerCartonImages || []),
-        ...(actualUserMods?.uploadedImages?.innerCartonImages?.map((file: any) => ({
-          id: Math.random(),
-          componentName: file.originalname,
-          image: `/webhook/pcf-images/${file.filename}`,
-          filename: file.filename,
-          isUserUpload: true
-        })) || [])
+        ...(actualUserMods?.uploadedImages?.innerCartonImages?.map(
+          (file: any) => ({
+            id: Math.random(),
+            componentName: file.originalname,
+            image: `/webhook/pcf-images/${file.filename}`,
+            filename: file.filename,
+            isUserUpload: true,
+          }),
+        ) || []),
       ],
 
       // ✅ Inner Carton Packing: InnerCarton images with dimensions
       innerCartonPacking: {
         images: [
           ...(actualWebhookImages?.innerCartonImages || []),
-          ...(actualUserMods?.uploadedImages?.innerCartonImages?.map((file: any) => ({
-            id: Math.random(),
-            componentName: file.originalname,
-            image: `/webhook/pcf-images/${file.filename}`,
-            filename: file.filename,
-            isUserUpload: true
-          })) || [])
+          ...(actualUserMods?.uploadedImages?.innerCartonImages?.map(
+            (file: any) => ({
+              id: Math.random(),
+              componentName: file.originalname,
+              image: `/webhook/pcf-images/${file.filename}`,
+              filename: file.filename,
+              isUserUpload: true,
+            }),
+          ) || []),
         ],
         dimensions: {
-          length: (actualAssortment as any)?.baseAssortment?.innerCartonLength || 
-                   (actualAssortment as any)?.innerCartonLength || 0,
-          width: (actualAssortment as any)?.baseAssortment?.innerCartonWidth || 
-                 (actualAssortment as any)?.innerCartonWidth || 0,
-          height: (actualAssortment as any)?.baseAssortment?.innerCartonHeight || 
-                  (actualAssortment as any)?.innerCartonHeight || 0,
+          length:
+            (actualAssortment as any)?.baseAssortment?.innerCartonLength ||
+            (actualAssortment as any)?.innerCartonLength ||
+            0,
+          width:
+            (actualAssortment as any)?.baseAssortment?.innerCartonWidth ||
+            (actualAssortment as any)?.innerCartonWidth ||
+            0,
+          height:
+            (actualAssortment as any)?.baseAssortment?.innerCartonHeight ||
+            (actualAssortment as any)?.innerCartonHeight ||
+            0,
         },
-        displayFormat: function() {
+        displayFormat: function () {
           return this.images.map((img, i) => ({
             image: img,
             separator: i === this.images.length - 1 ? '=' : '+',
-            isLast: i === this.images.length - 1
+            isLast: i === this.images.length - 1,
           }));
-        }
+        },
       },
 
       // ✅ Master Carton Images: Direct from webhook + user uploads
       masterCartonImages: [
         ...(actualWebhookImages?.masterCartonImages || []),
-        ...(actualUserMods?.uploadedImages?.masterCartonImages?.map((file: any) => ({
-          id: Math.random(),
-          componentName: file.originalname,
-          image: `/webhook/pcf-images/${file.filename}`,
-          filename: file.filename,
-          isUserUpload: true
-        })) || [])
+        ...(actualUserMods?.uploadedImages?.masterCartonImages?.map(
+          (file: any) => ({
+            id: Math.random(),
+            componentName: file.originalname,
+            image: `/webhook/pcf-images/${file.filename}`,
+            filename: file.filename,
+            isUserUpload: true,
+          }),
+        ) || []),
       ],
 
       // ✅ Master Carton Pack: MasterCarton images with dimensions
       masterCartonPack: {
         images: [
           ...(actualWebhookImages?.masterCartonImages || []),
-          ...(actualUserMods?.uploadedImages?.masterCartonImages?.map((file: any) => ({
+          ...(actualUserMods?.uploadedImages?.masterCartonImages?.map(
+            (file: any) => ({
+              id: Math.random(),
+              componentName: file.originalname,
+              image: `/webhook/pcf-images/${file.filename}`,
+              filename: file.filename,
+              isUserUpload: true,
+            }),
+          ) || []),
+        ],
+        dimensions: {
+          length:
+            (actualAssortment as any)?.baseAssortment?.masterCartonLength ||
+            (actualAssortment as any)?.masterCartonLength ||
+            0,
+          width:
+            (actualAssortment as any)?.baseAssortment?.masterCartonWidth ||
+            (actualAssortment as any)?.masterCartonWidth ||
+            0,
+          height:
+            (actualAssortment as any)?.baseAssortment?.masterCartonHeight ||
+            (actualAssortment as any)?.masterCartonHeight ||
+            0,
+        },
+        displayFormat: function () {
+          return this.images.map((img, i) => ({
+            image: img,
+            separator: i === this.images.length - 1 ? '=' : '+',
+            isLast: i === this.images.length - 1,
+          }));
+        },
+      },
+
+      // ✅ Inner Carton/Pack Mark: From user uploaded shipping marks
+      innerCartonPackMark: [
+        ...(actualUserMods?.uploadedImages?.innerCartonShippingMarks?.map(
+          (file: any) => ({
             id: Math.random(),
             componentName: file.originalname,
             image: `/webhook/pcf-images/${file.filename}`,
             filename: file.filename,
-            isUserUpload: true
-          })) || [])
-        ],
-        dimensions: {
-          length: (actualAssortment as any)?.baseAssortment?.masterCartonLength || 
-                   (actualAssortment as any)?.masterCartonLength || 0,
-          width: (actualAssortment as any)?.baseAssortment?.masterCartonWidth || 
-                 (actualAssortment as any)?.masterCartonWidth || 0,
-          height: (actualAssortment as any)?.baseAssortment?.masterCartonHeight || 
-                  (actualAssortment as any)?.masterCartonHeight || 0,
-        },
-        displayFormat: function() {
-          return this.images.map((img, i) => ({
-            image: img,
-            separator: i === this.images.length - 1 ? '=' : '+',
-            isLast: i === this.images.length - 1
-          }));
-        }
-      },
-
-      // ✅ Inner Carton/Pack Mark: From user uploaded shipping marks
-      innerCartonPackMark: actualUserMods?.uploadedImages?.innerCartonImages?.find((file: any) => 
-        file.originalname.toLowerCase().includes('shipping') || 
-        file.originalname.toLowerCase().includes('mark')
-      ) ? {
-        id: Math.random(),
-        componentName: 'Inner Carton Shipping Mark',
-        image: `/webhook/pcf-images/${actualUserMods.uploadedImages.innerCartonImages.find((file: any) => 
-          file.originalname.toLowerCase().includes('shipping') || 
-          file.originalname.toLowerCase().includes('mark')
-        )?.filename}`,
-        filename: actualUserMods.uploadedImages.innerCartonImages.find((file: any) => 
-          file.originalname.toLowerCase().includes('shipping') || 
-          file.originalname.toLowerCase().includes('mark')
-        )?.filename || ''
-      } : null,
+            isUserUpload: true,
+          }),
+        ) || []),
+      ],
 
       // ✅ Main Shipping Mark: From user uploaded master carton marks
-      mainShippingMark: actualUserMods?.uploadedImages?.masterCartonImages?.find((file: any) => 
-        file.originalname.toLowerCase().includes('main') && 
-        file.originalname.toLowerCase().includes('shipping')
-      ) ? {
-        id: Math.random(),
-        componentName: 'Main Shipping Mark',
-        image: `/webhook/pcf-images/${actualUserMods.uploadedImages.masterCartonImages.find((file: any) => 
-          file.originalname.toLowerCase().includes('main') && 
-          file.originalname.toLowerCase().includes('shipping')
-        )?.filename}`,
-        filename: actualUserMods.uploadedImages.masterCartonImages.find((file: any) => 
-          file.originalname.toLowerCase().includes('main') && 
-          file.originalname.toLowerCase().includes('shipping')
-        )?.filename || ''
-      } : null,
+      mainShippingMark: [
+        ...(actualUserMods?.uploadedImages?.masterCartonMainShippingMark?.map(
+          (file: any) => ({
+            id: Math.random(),
+            componentName: file.originalname,
+            image: `/webhook/pcf-images/${file.filename}`,
+            filename: file.filename,
+            isUserUpload: true,
+          }),
+        ) || []),
+      ],
 
       // ✅ Side Shipping Mark: From user uploaded master carton marks
-      sideShippingMark: actualUserMods?.uploadedImages?.masterCartonImages?.find((file: any) => 
-        file.originalname.toLowerCase().includes('side') && 
-        file.originalname.toLowerCase().includes('shipping')
-      ) ? {
-        id: Math.random(),
-        componentName: 'Side Shipping Mark',
-        image: `/webhook/pcf-images/${actualUserMods.uploadedImages.masterCartonImages.find((file: any) => 
-          file.originalname.toLowerCase().includes('side') && 
-          file.originalname.toLowerCase().includes('shipping')
-        )?.filename}`,
-        filename: actualUserMods.uploadedImages.masterCartonImages.find((file: any) => 
-          file.originalname.toLowerCase().includes('side') && 
-          file.originalname.toLowerCase().includes('shipping')
-        )?.filename || ''
-      } : null,
-
-      // ✅ Shipping Marks: Object with all shipping marks
-      shippingMarks: {
-        innerCartonMark: actualUserMods?.uploadedImages?.innerCartonImages?.find((file: any) => 
-          file.originalname.toLowerCase().includes('shipping') || 
-          file.originalname.toLowerCase().includes('mark')
-        ),
-        mainShippingMark: actualUserMods?.uploadedImages?.masterCartonImages?.find((file: any) => 
-          file.originalname.toLowerCase().includes('main') && 
-          file.originalname.toLowerCase().includes('shipping')
-        ),
-        sideShippingMark: actualUserMods?.uploadedImages?.masterCartonImages?.find((file: any) => 
-          file.originalname.toLowerCase().includes('side') && 
-          file.originalname.toLowerCase().includes('shipping')
-        )
-      }
+      sideShippingMark: [
+        ...(actualUserMods?.uploadedImages?.masterCartonSideShippingMarks?.map(
+          (file: any) => ({
+            id: Math.random(),
+            componentName: file.originalname,
+            image: `/webhook/pcf-images/${file.filename}`,
+            filename: file.filename,
+            isUserUpload: true,
+          }),
+        ) || []),
+      ],
     };
 
     console.log('🔍 Preview Transform - Final preview data:', previewData);
 
     return {
       ...actualAssortment,
-      pcfImages: previewData
+      pcfImages: previewData,
     } as unknown as AssortmentData;
   };
 
@@ -398,7 +444,9 @@ export function PCFPreviewPage({
             >
               <div className="flex items-center">
                 <Icons.ShareO1 width={16} height={16} />
-                <span className="ml-2">{String(t('keyButton_download.pdfForm'))}</span>
+                <span className="ml-2">
+                  {String(t('keyButton_download.pdfForm'))}
+                </span>
               </div>
             </ReportButton>
 
@@ -414,7 +462,7 @@ export function PCFPreviewPage({
                 </span>
               </div>
             </ReportButton>
-            
+
             <ReportButton
               itemId={actualAssortmentId}
               itemType="item"
@@ -464,7 +512,11 @@ export function PCFPreviewPage({
                 <Icons.UCheck width={16} height={16} />
               )}
               <span className="ml-2">
-                {String(isApproved ? t('keyButton_approved') : t('keyButton_approved'))}
+                {String(
+                  isApproved
+                    ? t('keyButton_approved')
+                    : t('keyButton_approved'),
+                )}
               </span>
             </div>
           </Button>
@@ -474,16 +526,14 @@ export function PCFPreviewPage({
       {/* Preview Section */}
       <div className="mt-4 overflow-hidden flex justify-center bg-white p-5 rounded-xl">
         {hasImages ? (
-          <PreviewPDFContainer
-            assortment={transformToAssortmentData()}
-          />
+          <PreviewPDFContainer assortment={transformToAssortmentData()} />
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-gray-500">
             <Icons.ShareO1 width={48} height={48} className="mb-4 opacity-50" />
             <h3 className="text-lg font-medium mb-2">No Images Available</h3>
             <p className="text-sm text-center max-w-md">
-              No PCF images have been uploaded for this assortment yet. 
-              Upload images in the PCF Images section to generate a preview.
+              No PCF images have been uploaded for this assortment yet. Upload
+              images in the PCF Images section to generate a preview.
             </p>
           </div>
         )}

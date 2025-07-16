@@ -15,7 +15,7 @@ export interface Assortment {
   updatedAt: string;
   status: 'pending' | 'todo' | 'ongoing' | 'completed' | 'approved';
   uploadStatus: 'pending' | 'in-progress' | 'completed';
-  
+
   // Dimensions from webhook
   length_cm: number;
   width_cm: number;
@@ -26,16 +26,16 @@ export interface Assortment {
   inner_carton_length_cm: number;
   inner_carton_width_cm: number;
   inner_carton_height_cm: number;
-  
+
   // Optional legacy image (might not be used with webhook data)
   image?: FileData;
-  
+
   // User-modifiable fields (can be updated via forms)
   masterCUFT?: number;
   masterGrossWeight?: number;
   productInCarton?: number;
   productPerUnit?: number;
-  
+
   // Optional additional fields
   labels?: Record<string, { id: number; value: string; name: string }>[];
   itemInCarton?: number;
@@ -55,6 +55,9 @@ export interface AssortmentPCF extends Assortment {
     displayImages: PcfImage[] | any[];
     innerCartonImages: PcfImage[] | any[];
     masterCartonImages: PcfImage[] | any[];
+    innerCartonShippingMarks: PcfImage[]; // Optional shipping marks
+    masterCartonMainShippingMarks: PcfImage[]; // Optional main shipping marks
+    masterCartonSideShippingMarks: PcfImage[]; // Optional side shipping marks
   };
 }
 
@@ -129,18 +132,16 @@ export interface ComponentData {
 // User modifications stored in database
 export interface UserModifications {
   uploadedImages: {
-    [componentNo: string]: {
-      itemPackImages: PcfImage[];
-      itemBarcodeImages: PcfImage[];
-      displayImages: PcfImage[];
-      innerCartonImages: PcfImage[]; // ✅ Regular inner carton images
-      masterCartonImages: PcfImage[]; // ✅ Regular master carton images
-      
-      // ✅ NEW: Separate shipping mark arrays (extracted from labels)
-      innerCartonShippingMarks?: PcfImage[];
-      masterCartonMainShippingMarks?: PcfImage[];
-      masterCartonSideShippingMarks?: PcfImage[];
-    };
+    itemPackImages: PcfImage[];
+    itemBarcodeImages: PcfImage[];
+    displayImages: PcfImage[];
+    innerCartonImages: PcfImage[];
+    masterCartonImages: PcfImage[];
+
+    // Separate shipping mark arrays (extracted from labels)
+    innerCartonShippingMarks: PcfImage[];
+    masterCartonMainShippingMarks: PcfImage[];
+    masterCartonSideShippingMarks: PcfImage[];
   };
   imageLabels: Record<string, string>; // ✅ Enhanced with shipping mark detection
   customFields: Record<string, any>;
@@ -207,6 +208,9 @@ export interface AssortmentData {
       displayImages: PcfImage[];
       innerCartonImages: PcfImage[];
       masterCartonImages: PcfImage[];
+      innerCartonShippingMarks: PcfImage[];
+      masterCartonMainShippingMarks: PcfImage[];
+      masterCartonSideShippingMarks: PcfImage[];
     };
     webhookImages: WebhookPcfImages; // Keep original webhook images separate
     imageLabels: Record<string, string>;
@@ -303,7 +307,7 @@ export interface UploadImagesDTO {
   masterCartonImages?: File[];
   imageLabels?: Record<string, string>; // ✅ ENHANCED: Now supports shipping mark labels
   isWebhookData?: boolean;
-  
+
   // ✅ NEW: Optional separate shipping mark arrays (for future use)
   innerCartonShippingMarks?: File[];
   masterCartonMainShippingMarks?: File[];
@@ -312,15 +316,20 @@ export interface UploadImagesDTO {
 
 export const SHIPPING_MARK_LABELS = {
   INNER_SHIPPING_MARK: 'inner_shipping_mark',
-  MASTER_MAIN_SHIPPING_MARK: 'main_shipping_mark', 
+  MASTER_MAIN_SHIPPING_MARK: 'main_shipping_mark',
   MASTER_SIDE_SHIPPING_MARK: 'side_shipping_mark',
 } as const;
 
-export type ShippingMarkLabel = typeof SHIPPING_MARK_LABELS[keyof typeof SHIPPING_MARK_LABELS];
+export type ShippingMarkLabel =
+  (typeof SHIPPING_MARK_LABELS)[keyof typeof SHIPPING_MARK_LABELS];
 
 // ✅ NEW: Helper function to detect shipping mark labels
-export const isShippingMarkLabel = (label: string): label is ShippingMarkLabel => {
-  return Object.values(SHIPPING_MARK_LABELS).includes(label as ShippingMarkLabel);
+export const isShippingMarkLabel = (
+  label: string,
+): label is ShippingMarkLabel => {
+  return Object.values(SHIPPING_MARK_LABELS).includes(
+    label as ShippingMarkLabel,
+  );
 };
 
 // API Response types
@@ -394,7 +403,12 @@ export interface ImageCounts {
 }
 
 // Status types
-export type AssortmentStatus = 'pending' | 'todo' | 'ongoing' | 'completed' | 'approved';
+export type AssortmentStatus =
+  | 'pending'
+  | 'todo'
+  | 'ongoing'
+  | 'completed'
+  | 'approved';
 export type DataSource = 'webhook' | 'traditional' | 'navigation';
 
 // Export utility type for component props

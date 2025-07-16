@@ -11,7 +11,7 @@ import {
   useInvalidateAssortmentCache,
   getWebhookAssortmentQuery,
   AssortmentData,
-  AssortmentStatus
+  AssortmentStatus,
 } from '@/features/packing-instructions';
 import { PackingInstructionHeader } from '../components/packing-instruction-header';
 import { PackingInstructionItem } from '../components/packing-instruction-item';
@@ -20,9 +20,15 @@ interface PackingInstructionViewProps {
   assortmentId?: string;
 }
 
-type ExtendedDataSource = 'webhook-cached' | 'traditional' | 'navigation-fallback' | 'navigation';
+type ExtendedDataSource =
+  | 'webhook-cached'
+  | 'traditional'
+  | 'navigation-fallback'
+  | 'navigation';
 
-export function PackingInstructionView({ assortmentId: propAssortmentId }: PackingInstructionViewProps) {
+export function PackingInstructionView({
+  assortmentId: propAssortmentId,
+}: PackingInstructionViewProps) {
   const { t } = useTranslation();
   const { identifier } = useParams<{ identifier: string }>();
   const location = useLocation();
@@ -32,9 +38,10 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
 
   // Check if we have data from navigation state (from table/card click)
   const navigationData = location.state?.assortmentData;
-  
+
   // Cache management hooks
-  const { invalidateAssortment, getCacheStats } = useInvalidateAssortmentCache();
+  const { invalidateAssortment, getCacheStats } =
+    useInvalidateAssortmentCache();
 
   // State for cache debugging (remove in production)
   const [showCacheInfo, setShowCacheInfo] = useState(false);
@@ -49,7 +56,7 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
     isLoading,
     error,
     dataSource,
-    cacheStats
+    cacheStats,
   } = useGetAssortmentSmart(assortmentId, true, {
     initialData: initialWebhookData,
     enabled: !!assortmentId && assortmentId.startsWith('A'),
@@ -59,8 +66,14 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
   });
 
   // Check if we have valid data, if not and we have navigation data, create fallback data
-  const hasValidData = assortmentData?.baseAssortment?.itemNo && assortmentData?.baseAssortment?.name;
-  const shouldUseFallback = !hasValidData && navigationData && navigationData.itemNo && navigationData.name;
+  const hasValidData =
+    assortmentData?.baseAssortment?.itemNo &&
+    assortmentData?.baseAssortment?.name;
+  const shouldUseFallback =
+    !hasValidData &&
+    navigationData &&
+    navigationData.itemNo &&
+    navigationData.name;
 
   // Create fallback AssortmentData from navigation data
   const fallbackAssortmentData = useMemo(() => {
@@ -95,7 +108,16 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
         salesOrder: navigationData.salesOrder,
       },
       userModifications: {
-        uploadedImages: {},
+        uploadedImages: {
+          itemPackImages: [],
+          itemBarcodeImages: [],
+          displayImages: [],
+          innerCartonImages: [],
+          masterCartonImages: [],
+          innerCartonShippingMarks: [],
+          masterCartonMainShippingMarks: [],
+          masterCartonSideShippingMarks: [],
+        },
         imageLabels: {},
         customFields: {},
         formData: {},
@@ -111,7 +133,9 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
           productId: navigationData.productId || 0,
           createdAt: navigationData.createdAt || new Date().toISOString(),
           updatedAt: navigationData.updatedAt || new Date().toISOString(),
-          status: String(navigationData.status || 'pending') as AssortmentStatus, // FIX: Proper type casting
+          status: String(
+            navigationData.status || 'pending',
+          ) as AssortmentStatus, // FIX: Proper type casting
           uploadStatus: 'pending',
           length_cm: navigationData.length_cm || 0,
           width_cm: navigationData.width_cm || 0,
@@ -126,13 +150,17 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
           masterGrossWeight: navigationData.masterGrossWeight,
           productInCarton: navigationData.productInCarton,
           productPerUnit: navigationData.productPerUnit,
-          pcfImages: navigationData.webhookImages || navigationData.pcfImages || {
-            itemPackImages: [],
-            itemBarcodeImages: [],
-            displayImages: [],
-            innerCartonImages: [],
-            masterCartonImages: [],
-          },
+          pcfImages: navigationData.webhookImages ||
+            navigationData.pcfImages || {
+              itemPackImages: [],
+              itemBarcodeImages: [],
+              displayImages: [],
+              innerCartonImages: [],
+              masterCartonImages: [],
+              innerCartonShippingMarks: [],
+              masterCartonMainShippingMarks: [],
+              masterCartonSideShippingMarks: [],
+            },
         },
         allImages: {
           itemPackImages: [],
@@ -140,14 +168,21 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
           displayImages: [],
           innerCartonImages: [],
           masterCartonImages: [],
+          innerCartonShippingMarks: [],
+          masterCartonMainShippingMarks: [],
+          masterCartonSideShippingMarks: [],
         },
-        webhookImages: navigationData.webhookImages || navigationData.pcfImages || {
-          itemPackImages: [],
-          itemBarcodeImages: [],
-          displayImages: [],
-          innerCartonImages: [],
-          masterCartonImages: [],
-        },
+        webhookImages: navigationData.webhookImages ||
+          navigationData.pcfImages || {
+            itemPackImages: [],
+            itemBarcodeImages: [],
+            displayImages: [],
+            innerCartonImages: [],
+            masterCartonImages: [],
+            innerCartonShippingMarks: [],
+            masterCartonMainShippingMarks: [],
+            masterCartonSideShippingMarks: [],
+          },
         imageLabels: {},
         combinedImageCount: 0, // Calculate if needed
       },
@@ -166,8 +201,12 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
   }, [shouldUseFallback, navigationData]);
 
   // Use fallback data if needed
-  const finalAssortmentData = shouldUseFallback ? fallbackAssortmentData : assortmentData;
-  const finalDataSource: ExtendedDataSource = shouldUseFallback ? 'navigation-fallback' : dataSource;
+  const finalAssortmentData = shouldUseFallback
+    ? fallbackAssortmentData
+    : assortmentData;
+  const finalDataSource: ExtendedDataSource = shouldUseFallback
+    ? 'navigation-fallback'
+    : dataSource;
 
   // Extract the merged assortment data for components
   const assortment = finalAssortmentData?.mergedData?.assortment;
@@ -225,12 +264,14 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
   if (isLoading && !shouldUseFallback) {
     return (
       <>
-        <Breadcrumbs 
-          isLoading={true} 
+        <Breadcrumbs
+          isLoading={true}
           breadcrumbs={[
             {
               to: `/packing-instruction`,
-              label: t('keyNavigation_packingInstructions') || 'Packing Instructions',
+              label:
+                t('keyNavigation_packingInstructions') ||
+                'Packing Instructions',
             },
             {
               to: '#',
@@ -251,12 +292,14 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
   if (error && !finalAssortmentData) {
     return (
       <>
-        <Breadcrumbs 
-          isLoading={false} 
+        <Breadcrumbs
+          isLoading={false}
           breadcrumbs={[
             {
               to: `/packing-instruction`,
-              label: t('keyNavigation_packingInstructions') || 'Packing Instructions',
+              label:
+                t('keyNavigation_packingInstructions') ||
+                'Packing Instructions',
             },
             {
               to: '#',
@@ -268,7 +311,9 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
         <PackingInstructionHeader isLoading={false} />
         <div className="flex items-center justify-center py-8">
           <div className="text-center p-8 bg-red-50 rounded-lg border border-red-200">
-            <h2 className="text-xl font-semibold text-red-800 mb-2">Assortment Not Found</h2>
+            <h2 className="text-xl font-semibold text-red-800 mb-2">
+              Assortment Not Found
+            </h2>
             <p className="text-red-600 mb-4">
               {error.message || `Could not load assortment ${assortmentId}`}
             </p>
@@ -277,16 +322,19 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
             </p>
             <ul className="text-sm text-gray-600 text-left mb-4 space-y-1">
               <li>• Click from a sales order table, or</li>
-              <li>• Use the individual assortment button in Odoo to send the data first</li>
+              <li>
+                • Use the individual assortment button in Odoo to send the data
+                first
+              </li>
             </ul>
             <div className="flex gap-2 justify-center">
-              <button 
-                onClick={() => window.location.reload()} 
+              <button
+                onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
                 Retry
               </button>
-              <button 
+              <button
                 onClick={handleInvalidateCache}
                 className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
               >
@@ -305,9 +353,7 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
       <div className="flex items-center justify-between">
         <div>
           <span className="font-medium">Data Source:</span> Navigation Fallback
-          <span className="ml-2 text-orange-600">
-            (Using navigation data)
-          </span>
+          <span className="ml-2 text-orange-600">(Using navigation data)</span>
         </div>
         <div className="flex gap-2">
           <button
@@ -326,7 +372,9 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
       </div>
       {showCacheInfo && cacheStats && (
         <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
-          <p><strong>Cache Stats:</strong></p>
+          <p>
+            <strong>Cache Stats:</strong>
+          </p>
           <p>Total Queries: {cacheStats.totalQueries}</p>
           <p>Assortment Queries: {cacheStats.assortmentQueries}</p>
           <p>Cached Assortments: {cacheStats.cachedAssortments.join(', ')}</p>
@@ -337,7 +385,8 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
     <div className="mb-4 p-2 bg-green-100 rounded text-sm">
       <div className="flex items-center justify-between">
         <div>
-          <span className="font-medium">Enhanced Data Source:</span> {finalDataSource}
+          <span className="font-medium">Enhanced Data Source:</span>{' '}
+          {finalDataSource}
           {finalAssortmentData?.metadata?.version && (
             <span className="ml-2 text-gray-600">
               v{finalAssortmentData.metadata.version}
@@ -367,7 +416,9 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
       </div>
       {showCacheInfo && cacheStats && (
         <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
-          <p><strong>Cache Stats:</strong></p>
+          <p>
+            <strong>Cache Stats:</strong>
+          </p>
           <p>Total Queries: {cacheStats.totalQueries}</p>
           <p>Assortment Queries: {cacheStats.assortmentQueries}</p>
           <p>Stale Queries: {cacheStats.staleQueries}</p>
@@ -385,7 +436,8 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
         breadcrumbs={[
           {
             to: `/packing-instruction/${assortmentId}`,
-            label: t('keyNavigation_packingInstructions') || 'Packing Instructions',
+            label:
+              t('keyNavigation_packingInstructions') || 'Packing Instructions',
           },
           {
             to: '#',
@@ -394,17 +446,19 @@ export function PackingInstructionView({ assortmentId: propAssortmentId }: Packi
           },
         ]}
       />
-      
+
       {/* Enhanced data source indicator - remove in production */}
       {dataSourceIndicator}
-      
-      <PackingInstructionHeader 
-        assortment={displayAssortment} 
+
+      <PackingInstructionHeader
+        assortment={displayAssortment}
         isLoading={isLoading && !shouldUseFallback}
       />
-      
-      {displayAssortment && <PackingInstructionItem assortment={displayAssortment} />}
+
+      {displayAssortment && (
+        <PackingInstructionItem assortment={displayAssortment} />
+      )}
     </>
   );
-}// src/features/packing-instructions/routes/packing-instruction-view.tsx
+} // src/features/packing-instructions/routes/packing-instruction-view.tsx
 // MINIMAL CHANGES to fix TypeScript
